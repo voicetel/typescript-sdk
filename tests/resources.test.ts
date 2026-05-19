@@ -369,7 +369,7 @@ describe("NumbersService", () => {
     const fax: NumberFaxRequest = { email: "f@x.com" };
     expect((await client.numbers.setFax("2015550123", fax)).email).toBe("f@x.com");
     await expect(client.numbers.removeFax("2015550123")).resolves.toBeUndefined();
-    const fwd: NumberForwardRequest = { destination: 2125550123 };
+    const fwd: NumberForwardRequest = { destination: "2125550123" };
     expect((await client.numbers.setForward("2015550123", fwd)).forwardTo).toBe("2125550123");
     await expect(client.numbers.removeForward("2015550123")).resolves.toBeUndefined();
     expect((await client.numbers.getSms("2015550123")).type).toBe("email");

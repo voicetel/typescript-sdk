@@ -34,7 +34,7 @@ export interface NumberFaxRequest {
 /** Body for `PUT /v2.2/numbers/{number}/forward`. */
 export interface NumberForwardRequest {
   /** 10-digit destination number. */
-  destination: number;
+  destination: PhoneNumber;
 }
 
 /** Body for `PUT /v2.2/numbers/{number}/translation`. */
