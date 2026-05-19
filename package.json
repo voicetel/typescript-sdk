@@ -1,0 +1,60 @@
+{
+  "name": "@voicetel/sdk",
+  "version": "2.2.10",
+  "description": "Official TypeScript / JavaScript SDK for the VoiceTel REST API",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsup src/index.ts --format esm,cjs --dts --clean --target node18",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:cov": "vitest run --coverage",
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "npm run typecheck && npm run test && npm run build"
+  },
+  "keywords": [
+    "voicetel",
+    "telephony",
+    "sip",
+    "sms",
+    "e911",
+    "voip",
+    "did",
+    "porting",
+    "10dlc"
+  ],
+  "author": "VoiceTel <support@voicetel.com>",
+  "license": "MIT",
+  "homepage": "https://github.com/voicetel/typescript-sdk",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/voicetel/typescript-sdk.git"
+  },
+  "bugs": {
+    "url": "https://github.com/voicetel/typescript-sdk/issues"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@vitest/coverage-v8": "^2.0.0",
+    "tsup": "^8.0.0",
+    "typescript": "^5.4.0",
+    "vitest": "^2.0.0"
+  }
+}
