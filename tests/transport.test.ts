@@ -47,6 +47,7 @@ describe("authentication & headers", () => {
     expect(captured[0]!.headers["Authorization"]).toBe("Bearer k");
     expect(captured[0]!.headers["User-Agent"]).toMatch(/^voicetel-typescript\//);
     expect(captured[0]!.headers["Accept"]).toBe("application/json");
+    expect(captured[0]!.headers["Accept-Encoding"]).toBe("gzip");
   });
 
   it("omits Authorization on unauthenticated endpoints", async () => {
