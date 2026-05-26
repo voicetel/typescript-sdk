@@ -96,9 +96,13 @@ export class Transport {
 
     const headers: Record<string, string> = {
       Accept: "application/json",
+      "Accept-Encoding": "gzip",
       "User-Agent": this.userAgent,
     };
     if (requireAuth) headers["Authorization"] = `Bearer ${this.apiKey}`;
+    if (["POST", "PUT", "PATCH"].includes(spec.method)) {
+      headers["Idempotency-Key"] = crypto.randomUUID();
+    }
     let bodyText: string | undefined;
     if (spec.body !== undefined) {
       bodyText = JSON.stringify(spec.body);
