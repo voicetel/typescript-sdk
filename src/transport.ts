@@ -1,3 +1,5 @@
+import { randomUUID } from "node:crypto";
+
 import { ApiError, kindFromStatus, type ApiErrorOptions } from "./errors.js";
 import { DEFAULT_BASE_URL, DEFAULT_USER_AGENT } from "./version.js";
 
@@ -101,7 +103,7 @@ export class Transport {
     };
     if (requireAuth) headers["Authorization"] = `Bearer ${this.apiKey}`;
     if (["POST", "PUT", "PATCH"].includes(spec.method)) {
-      headers["Idempotency-Key"] = crypto.randomUUID();
+      headers["Idempotency-Key"] = randomUUID();
     }
     let bodyText: string | undefined;
     if (spec.body !== undefined) {
