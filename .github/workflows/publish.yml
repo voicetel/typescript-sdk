@@ -1,6 +1,6 @@
 name: Publish to npm
 
-# Publishes the @voicetel/sdk scoped package to npm on every v* tag push.
+# Publishes the @voicetel.com/sdk scoped package to npm on every v* tag push.
 # Uses an automation token stored as the NPM_TOKEN secret at
 # https://github.com/voicetel/typescript-sdk/settings/secrets/actions
 #
@@ -9,7 +9,7 @@ name: Publish to npm
 #   2. Account settings → Access Tokens → Generate New Token → Automation.
 #   3. Copy the token into the NPM_TOKEN repo secret.
 #
-# The `--access public` flag is required because @voicetel/sdk is a
+# The `--access public` flag is required because @voicetel.com/sdk is a
 # scoped package — npm defaults scoped packages to private without it.
 # Provenance is enabled (`--provenance`) so the artifact carries a
 # cryptographic attestation of the GitHub Actions run that produced it.

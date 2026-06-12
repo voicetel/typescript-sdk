@@ -6,7 +6,7 @@
  * and https://voicetel.com/docs/api/v2.2/credentials/ to obtain credentials.
  *
  * ```ts
- * import { VoiceTelClient } from "@voicetel/sdk";
+ * import { VoiceTelClient } from "@voicetel.com/sdk";
  *
  * const client = new VoiceTelClient();
  * await client.login(1000000001, "hunter2");
