@@ -31,6 +31,12 @@ export interface RequestSpec {
 
 const RETRYABLE = new Set([429, 500, 502, 503, 504]);
 
+function stripTrailingSlashes(s: string): string {
+  let end = s.length;
+  while (end > 0 && s.charCodeAt(end - 1) === 47 /* '/' */) end--;
+  return end === s.length ? s : s.slice(0, end);
+}
+
 /**
  * @internal — handles auth, retry, JSON encode/decode, and error mapping.
  *
@@ -47,7 +53,7 @@ export class Transport {
 
   constructor(opts: ClientOptions = {}) {
     this.apiKey = opts.apiKey ?? "";
-    this.baseUrl = (opts.baseUrl ?? DEFAULT_BASE_URL).replace(/\/+$/, "");
+    this.baseUrl = stripTrailingSlashes(opts.baseUrl ?? DEFAULT_BASE_URL);
     this.timeoutMs = opts.timeoutMs ?? 30_000;
     this.maxRetries = opts.maxRetries ?? 2;
     if (this.maxRetries < 0) {
