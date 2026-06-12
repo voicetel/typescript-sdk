@@ -48,5 +48,5 @@ consumer side:
   `account/apikey`) are capped at 6 requests per hour per IP. Sustained
   abuse is rejected at the edge.
 
-Out of scope: vulnerabilities in the `@voicetel/sdk` npm package
+Out of scope: vulnerabilities in the `@voicetel.com/sdk` npm package
 caused by a forked / vendored copy that has been modified.

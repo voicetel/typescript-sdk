@@ -69,11 +69,11 @@ The official TypeScript / JavaScript client for the [VoiceTel REST API](https://
 ## 🚀 Installation
 
 ```bash
-npm install @voicetel/sdk
+npm install @voicetel.com/sdk
 # or
-pnpm add @voicetel/sdk
+pnpm add @voicetel.com/sdk
 # or
-yarn add @voicetel/sdk
+yarn add @voicetel.com/sdk
 ```
 
 Requires Node.js 18 or later (for the global `fetch` API). Browsers and Deno/Bun work without polyfills.
@@ -81,7 +81,7 @@ Requires Node.js 18 or later (for the global `fetch` API). Browsers and Deno/Bun
 ## 🏁 Quickstart
 
 ```ts
-import { VoiceTelClient } from "@voicetel/sdk";
+import { VoiceTelClient } from "@voicetel.com/sdk";
 
 const client = new VoiceTelClient();
 
@@ -146,7 +146,7 @@ import {
   type MessageSendRequest,
   type PortSubmitRequest,
   type NumberCampaignAssignRequest,
-} from "@voicetel/sdk";
+} from "@voicetel.com/sdk";
 
 const send: MessageSendRequest = {
   fromNumber: "2012548000",
@@ -175,7 +175,7 @@ All HTTP errors throw `ApiError` with a typed `kind`:
 Or use the type guards:
 
 ```ts
-import { isNotFound, isRateLimit } from "@voicetel/sdk";
+import { isNotFound, isRateLimit } from "@voicetel.com/sdk";
 
 try {
   const n = await client.numbers.get("9999999999");
@@ -193,7 +193,7 @@ try {
 For 409 conflicts on ACL or auth, the structured failure payload is on `err.body`:
 
 ```ts
-import { ApiError, isConflict, type AclConflictData } from "@voicetel/sdk";
+import { ApiError, isConflict, type AclConflictData } from "@voicetel.com/sdk";
 
 try {
   await client.acl.add({ acl: [{ cidr: "abc" }] });
