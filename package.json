@@ -19,7 +19,7 @@
     "LICENSE"
   ],
   "scripts": {
-    "build": "tsup src/index.ts --format esm,cjs --dts --clean --target node20",
+    "build": "tsup src/index.ts --format esm,cjs --clean --target node20 && tsc --emitDeclarationOnly",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:cov": "vitest run --coverage",
@@ -50,11 +50,14 @@
   "engines": {
     "node": ">=20"
   },
+  "overrides": {
+    "esbuild": "^0.28.1"
+  },
   "devDependencies": {
     "@types/node": "^26.1.1",
     "@vitest/coverage-v8": "^4.0.0",
     "tsup": "^8.0.0",
-    "typescript": "^6.0.3",
+    "typescript": "^7.0.2",
     "vitest": "^4.0.0"
   }
 }
