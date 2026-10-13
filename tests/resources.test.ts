@@ -321,11 +321,17 @@ describe("NumbersService", () => {
         ok({
           number: "2015550123",
           campaignId: "C1",
-          carrier: 17,
-          network: "A",
-          upstreamCnpId: "CAMP004",
+          status: "enabled",
+          carrier: 19,
+          network: "B",
+          upstreamCnpId: "CAMP003",
+          alreadyAssigned: false,
           previousNetwork: null,
           previousNetworkCleared: false,
+          orderId: "9911",
+          warning: null,
+          message: null,
+          job: null,
         }),
       "DELETE /v2.2/numbers/2015550123/messaging-campaign": () =>
         ok({
@@ -344,7 +350,7 @@ describe("NumbersService", () => {
           failed: [],
         }),
       "PATCH /v2.2/numbers/2015550123/port-out-pin": () =>
-        ok({ number: "2015550123", portOutPin: "1234" }),
+        ok({ number: "2015550123", portOutPin: "1234", changed: true }),
     });
 
     expect((await client.numbers.list()).numbers[0]!.route).toBe(4);
@@ -380,13 +386,74 @@ describe("NumbersService", () => {
     const pm: NumberMessagingPatchRequest = { routeIn: 1 };
     expect((await client.numbers.patchMessaging("2015550123", pm)).updated).toEqual(["routeIn"]);
     const ac: NumberCampaignAssignRequest = { campaignId: "C1" };
-    expect((await client.numbers.assignCampaign("2015550123", ac)).carrier).toBe(17);
+    const assigned = await client.numbers.assignCampaign("2015550123", ac);
+    expect(assigned.status).toBe("enabled");
+    expect(assigned.network).toBe("B");
+    expect(assigned.carrier).toBe(19);
+    expect(assigned.orderId).toBe("9911");
+    expect(assigned.job).toBeNull();
     expect((await client.numbers.unassignCampaign("2015550123")).unassigned).toBe(true);
     expect((await client.numbers.bulkUnassignCampaign(["2015550123"])).unassignedNumbers).toEqual([
       "2015550123",
     ]);
     const pin: PortOutPinUpdateRequest = { pin: "1234" };
-    expect((await client.numbers.setPortOutPin("2015550123", pin)).portOutPin).toBe("1234");
+    const pinResult = await client.numbers.setPortOutPin("2015550123", pin);
+    expect(pinResult.portOutPin).toBe("1234");
+    expect(pinResult.changed).toBe(true);
+  });
+
+  it("reports an async path-C enablement (202 + pending job)", async () => {
+    const job = {
+      campaignId: "CAMP002",
+      state: "queued",
+      message: "Queued",
+      createdAt: "2026-10-13T09:30:00+00:00",
+      updatedAt: "2026-10-13T09:30:00+00:00",
+    };
+    const { client } = buildMockClient({
+      "PUT /v2.2/numbers/2015550123/messaging-campaign": () => ({
+        status: 202,
+        body: JSON.stringify({
+          status: "success",
+          data: {
+            number: "2015550123",
+            campaignId: "CAMP002",
+            status: "pending",
+            carrier: 1,
+            network: "C",
+            upstreamCnpId: "BANDW",
+            alreadyAssigned: false,
+            previousNetwork: null,
+            previousNetworkCleared: false,
+            orderId: null,
+            warning: null,
+            message: "Enablement accepted; the number is being provisioned.",
+            job,
+          },
+        }),
+      }),
+      "GET /v2.2/numbers/2015550123/messaging": () =>
+        ok({
+          number: "2015550123",
+          enabled: false,
+          carrier: 0,
+          routeIn: 0,
+          resource: "x",
+          network: null,
+          pending: { ...job, state: "routing" },
+          campaign: null,
+        }),
+    });
+
+    const assigned = await client.numbers.assignCampaign("2015550123", { campaignId: "CAMP002" });
+    expect(assigned.status).toBe("pending");
+    expect(assigned.orderId).toBeNull();
+    expect(assigned.message).toContain("provisioned");
+    expect(assigned.job?.state).toBe("queued");
+
+    const state = await client.numbers.getMessaging("2015550123");
+    expect(state.network).toBeNull();
+    expect(state.pending?.state).toBe("routing");
   });
 });
 

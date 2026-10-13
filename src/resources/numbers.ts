@@ -216,6 +216,7 @@ export class NumbersService {
     });
   }
 
+  /** Update inbound / outbound SMS routing. `routeOut` must be `0` or the route the number is enabled on. */
   patchMessaging(
     number: string,
     body: NumberMessagingPatchRequest,
@@ -229,6 +230,12 @@ export class NumbersService {
     });
   }
 
+  /**
+   * Enable messaging on a 10DLC campaign. Path B binds synchronously
+   * (200, `status: "enabled"`); path C is provisioned asynchronously
+   * (202, `status: "pending"` — poll `getMessaging` until the job is
+   * `done` or `failed`). Campaigns still on path A are refused (409).
+   */
   assignCampaign(
     number: string,
     body: NumberCampaignAssignRequest,

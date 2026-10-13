@@ -28,8 +28,6 @@ export interface AccountServices {
   bypassMedia?: boolean;
   /** International calling enabled. */
   intl?: boolean;
-  /** Remote Caller ID display enabled. */
-  rcid?: boolean;
   mms?: boolean;
   dialer?: boolean;
   sms?: boolean;
@@ -49,7 +47,7 @@ export interface AccountData {
   callerId?: string;
   /** IANA timezone identifier. */
   timezone?: string;
-  /** Authentication mode (0=Digest, 1=IP, 2=Digest OR IP, 3=Digest AND IP). */
+  /** Authentication mode (0=Digest, 1=Lax (Digest | IP), 2=IP, 3=Strict (Digest + IP)). */
   authType?: 0 | 1 | 2 | 3;
   /** Max concurrent calls. */
   ccs?: number;

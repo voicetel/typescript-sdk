@@ -1,6 +1,6 @@
 import type { CidrEntry } from "./common.js";
 
-/** 0=Digest, 1=IP Auth, 2=Digest OR IP, 3=Digest AND IP. */
+/** 0=Digest, 1=Lax (Digest | IP), 2=IP, 3=Strict (Digest + IP). */
 export type AuthType = 0 | 1 | 2 | 3;
 
 /** Body for `PUT /v2.2/auth`. */
