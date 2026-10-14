@@ -31,7 +31,8 @@ export interface MessagingBrandCreateRequest {
 /**
  * Body for `POST /v2.2/messaging/campaigns`.
  *
- * `campaignClassName` and `campaignStartDate` are auto-populated if omitted.
+ * `campaignClassName` (from the campaign registry) and `campaignStartDate` (today)
+ * are auto-populated if omitted.
  */
 export interface MessagingCampaignCreateRequest {
   messagingBrandId: string;
@@ -113,12 +114,43 @@ export interface MessagingCampaignCreateData {
   result: RegistrationResult;
 }
 
+/** One carrier's latest DCA decision in {@link CampaignDca}. */
+export interface CampaignDcaCarrier {
+  /** Carrier name, e.g. "T-Mobile". */
+  carrier: string;
+  /** Carrier decision: ACTIVE, REJECTED, SUSPENDED, UNSUSPENDED or TERMINATED. */
+  status: string;
+  /** The reviewer's note, as given. */
+  detail: string;
+  /** ISO 8601 timestamp of the decision. */
+  updatedAt: string;
+}
+
+/** Carrier (DCA) review progress for a campaign. `null` for `CAMPAIGN_INVALID_ID`. */
+export interface CampaignDca {
+  /** True once every carrier has a DCA assigned to review the campaign. */
+  electionComplete: boolean;
+  /** Carriers with a DCA assigned so far (null when unavailable). */
+  electedCarriers: string[] | null;
+  /** Each carrier DCA decision received, latest per carrier. */
+  carriers: CampaignDcaCarrier[];
+}
+
 /** A single campaign and its currently-bound numbers. */
 export interface CampaignStatusItem {
   id: string;
-  /** CSP status — ACTIVE, CAMPAIGN_DCA_COMPLETE, SUSPENDED, ... */
+  /**
+   * Campaign status: CAMPAIGN_DCA_COMPLETE (ready: carrier review finished, numbers
+   * assigned), CAMPAIGN_DCA_COMPLETE_NO_NUMBERS_ASSIGNED, CAMPAIGN_PENDING_DCA (active
+   * at the campaign registry, but carrier (DCA) review is not finished yet; numbers
+   * cannot be enabled until it is), CAMPAIGN_DCA_REJECTED (a carrier's DCA rejected or
+   * suspended the campaign; see dca.carriers), CAMPAIGN_<registry status>, or
+   * CAMPAIGN_INVALID_ID.
+   */
   status: string;
   numbers: string[];
+  /** Carrier (DCA) review progress. `null` for `CAMPAIGN_INVALID_ID`. */
+  dca?: CampaignDca | null;
 }
 
 /** Response data for `GET /v2.2/messaging/campaigns`. */

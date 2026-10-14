@@ -17,8 +17,8 @@ describe("client construction", () => {
     const c = new VoiceTelClient();
     expect(c.baseUrl).toBe(DEFAULT_BASE_URL);
     expect(c.apiKey).toBe("");
-    expect(SDK_VERSION).toBe("2.2.10");
-    expect(API_VERSION).toBe("v2.2.10");
+    expect(SDK_VERSION).toBe("2.2.14");
+    expect(API_VERSION).toBe("v2.2.14");
   });
 
   it("strips trailing slash from baseUrl", () => {

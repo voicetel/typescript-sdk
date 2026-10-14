@@ -53,10 +53,13 @@ export interface NumberSmsRequest {
 /**
  * Body for `PATCH /v2.2/numbers/{number}/messaging`.
  *
- * At least one of `routeIn` / `routeOut` must be set.
+ * At least one of `routeIn` / `routeOut` must be set. `routeOut` must be `0`
+ * (outbound off) or the route the number is enabled on; to move a number to
+ * another campaign or messaging path use
+ * `PUT /v2.2/numbers/{number}/messaging-campaign`.
  */
 export interface NumberMessagingPatchRequest {
-  /** `numbers_sms` row id for inbound. `0` to detach. */
+  /** `numbers_sms` row id owned by the account. `0` to detach. */
   routeIn?: number;
   /** Outbound carrier id. */
   routeOut?: number;
@@ -116,6 +119,22 @@ export interface CampaignBinding {
   upstreamCnpId: string;
 }
 
+/** State of an asynchronous (path C) enablement. */
+export interface MessagingEnablementJob {
+  campaignId: string;
+  /**
+   * `queued` -> `hosting` -> `assigning` -> `routing` -> `done`, or `failed`
+   * (see `message`). The number keeps its previous routing until `done`.
+   */
+  state: "queued" | "hosting" | "assigning" | "routing" | "done" | "failed";
+  /** Latest progress note, or the reason for failure. */
+  message: string;
+  /** ISO 8601 timestamp. */
+  createdAt: string;
+  /** ISO 8601 timestamp. */
+  updatedAt: string;
+}
+
 /** Current messaging routing state for one number. */
 export interface NumberMessagingState {
   number: PhoneNumber;
@@ -129,7 +148,9 @@ export interface NumberMessagingState {
   /** URL or endpoint that receives inbound messages. */
   resource: string;
   /** Messaging path. `null` when carrier is 0 or any non-messaging carrier. */
-  network: "A" | "B" | null;
+  network: "A" | "B" | "C" | null;
+  /** Async path-C enablement in progress for this number, if any. */
+  pending?: MessagingEnablementJob | null;
   /** Bound campaign with CSP-side status. `null` when no binding exists. */
   campaign: CampaignBinding | null;
 }
@@ -205,20 +226,60 @@ export interface NumberTranslationData {
   translation: PhoneNumber;
 }
 
-/** Response data for `PUT /v2.2/numbers/{number}/messaging-campaign`. */
+/**
+ * Response data for `PUT /v2.2/numbers/{number}/messaging-campaign`.
+ *
+ * Idempotent: a number already bound to the campaign reports
+ * `status: "already"`.
+ */
 export interface NumberMessagingCampaignAssignData {
   number: PhoneNumber;
   campaignId: string;
-  /** 17 = path A, 19 = path B. */
+  /**
+   * `enabled` = bound now (path B); `already` = the number was already bound
+   * to this campaign; `pending` = accepted and being provisioned (path C) —
+   * poll `GET /v2.2/numbers/{number}/messaging` (`pending`) until the job
+   * state is `done` or `failed`.
+   */
+  status: "enabled" | "already" | "pending";
+  /**
+   * Outbound carrier id the number routes through once enabled
+   * (19 = path B, 1 = path C). A pending path-C number keeps its current
+   * routing until provisioning completes.
+   */
   carrier: number;
-  /** Messaging path the campaign resolves to. */
-  network: "A" | "B" | null;
-  /** CNP id from the CSP sharing record. */
+  /**
+   * Messaging path the campaign resolves to. Path B is assigned
+   * synchronously; path C is provisioned asynchronously (`status: "pending"`).
+   */
+  network: "B" | "C" | null;
+  /**
+   * CNP id from the CSP sharing record — `CAMP003` = path B, `BANDW` =
+   * path C. Campaigns on path A (`CAMP004`) are being migrated and take no
+   * new numbers.
+   */
   upstreamCnpId: string | null;
+  /**
+   * `true` when the number was already bound to this campaign on the target
+   * messaging path; records are reconciled and no new network order is placed.
+   */
+  alreadyAssigned: boolean;
   /** Path the number was on before this assignment, if any. */
-  previousNetwork: "A" | "B" | "unknown" | null;
+  previousNetwork: "A" | "B" | null;
   /** `true` if a prior conflicting binding was disabled to allow this one. */
   previousNetworkCleared: boolean;
+  /**
+   * Network order id created for a path-B assignment. `null` for path C
+   * (see `job`), idempotent no-ops, and assignments confirmed without a
+   * new order.
+   */
+  orderId: string | number | null;
+  /** Non-fatal condition detected during the assignment, if any. */
+  warning: string | null;
+  /** Human-readable note for a pending enablement. */
+  message: string | null;
+  /** Async path-C enablement job. */
+  job: MessagingEnablementJob | null;
 }
 
 /** Response data for `DELETE /v2.2/numbers/{number}/messaging-campaign`. */
@@ -257,8 +318,17 @@ export interface NumbersMessagingListData {
   numbers: NumberMessagingState[];
 }
 
-/** Response data for `PATCH /v2.2/numbers/{number}/port-out-pin`. */
+/**
+ * Response data for `PATCH /v2.2/numbers/{number}/port-out-pin`.
+ *
+ * Idempotent: a PIN is locked for 30 days once set, so a number that already
+ * has one returns it unchanged with `changed: false`.
+ */
 export interface PortOutPinUpdateData {
+  /** Ten-digit telephone number whose PIN is reported. */
   number: PhoneNumber;
+  /** The port-out PIN now on file — the value just set, or the existing value if already locked. */
   portOutPin: string;
+  /** `true` if this request set the PIN; `false` if one was already locked in. */
+  changed: boolean;
 }

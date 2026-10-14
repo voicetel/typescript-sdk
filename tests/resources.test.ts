@@ -223,7 +223,33 @@ describe("MessagingService", () => {
       "POST /v2.2/messaging/brands": () =>
         created({ result: { statusCode: "200", status: "Success" } }),
       "GET /v2.2/messaging/campaigns": () =>
-        ok({ campaigns: [{ id: "C1", status: "ACTIVE", numbers: ["2015550123"] }] }),
+        ok({
+          campaigns: [
+            {
+              id: "C1",
+              status: "CAMPAIGN_DCA_COMPLETE",
+              numbers: ["2015550123"],
+              dca: {
+                electionComplete: true,
+                electedCarriers: ["AT&T", "T-Mobile"],
+                carriers: [
+                  {
+                    carrier: "T-Mobile",
+                    status: "ACTIVE",
+                    detail: "Campaign approved",
+                    updatedAt: "2026-10-13T09:30:00Z",
+                  },
+                ],
+              },
+            },
+            {
+              id: "C2",
+              status: "CAMPAIGN_INVALID_ID",
+              numbers: [],
+              dca: null,
+            },
+          ],
+        }),
       "POST /v2.2/messaging/campaigns": () =>
         created({ result: { statusCode: "200", status: "Success" } }),
       "GET /v2.2/numbers/messaging": () => ok({ numbers: [] }),
@@ -244,7 +270,11 @@ describe("MessagingService", () => {
         })
       ).result.status,
     ).toBe("Success");
-    expect((await client.messaging.campaignStatus()).campaigns[0]!.id).toBe("C1");
+    const campaigns = (await client.messaging.campaignStatus()).campaigns;
+    expect(campaigns[0]!.id).toBe("C1");
+    expect(campaigns[0]!.dca!.electionComplete).toBe(true);
+    expect(campaigns[0]!.dca!.carriers[0]!.carrier).toBe("T-Mobile");
+    expect(campaigns[1]!.dca).toBeNull();
     expect(
       (
         await client.messaging.createCampaign({

@@ -130,8 +130,6 @@ export interface PortSummary {
   foc?: string;
   createdAt?: string;
   message?: string;
-  /** Related support ticket conversation URL. */
-  supportUrl?: string;
 }
 
 /** Full record for a single port-in. */
@@ -168,7 +166,7 @@ export interface OrderFailedEntry {
 /** Response data for `POST /v2.2/orders`. */
 export interface OrderCreateData {
   orderId: string;
-  /** USD deducted from `accounts.cash`. */
+  /** Amount deducted from the account balance. */
   amountCharged: number;
   /** Numbers inserted into the account on success. */
   numbersOrdered: string[];
