@@ -287,6 +287,32 @@ describe("MessagingService", () => {
     expect((await client.messaging.numbersState(["2015550123"])).numbers).toEqual([]);
     expect((await client.messaging.numbersState()).numbers).toEqual([]);
   });
+
+  it("walks the messaging-health surface (v2.2.15, raw responses)", async () => {
+    const { client } = buildMockClient({
+      "GET /v2.2/messaging/health": () => ok({ summary: { numbers: 3, healthy: 2 } }),
+      "GET /v2.2/messaging/health/alerts": () => ok({ enabled: true }),
+      "PUT /v2.2/messaging/health/alerts": (req) => {
+        expect(req.body).toEqual({ enabled: false });
+        return ok({ enabled: false });
+      },
+      "POST /v2.2/messaging/health/check": (req) => {
+        expect(req.body).toEqual({ number: "2125550123" });
+        return ok({ number: "2125550123", inService: true });
+      },
+      "GET /v2.2/messaging/health/samples": (req) => {
+        expect(new URL(req.url).searchParams.get("number")).toBe("2125550123");
+        return ok({ samples: [] });
+      },
+    });
+
+    // The spec defines no response schema for these, so the SDK returns the decoded object as-is.
+    expect((await client.messaging.health())["summary"]).toEqual({ numbers: 3, healthy: 2 });
+    expect((await client.messaging.healthAlerts())["enabled"]).toBe(true);
+    expect((await client.messaging.setHealthAlerts(false))["enabled"]).toBe(false);
+    expect((await client.messaging.healthCheck("2125550123"))["inService"]).toBe(true);
+    expect((await client.messaging.healthSamples("2125550123"))["samples"]).toEqual([]);
+  });
 });
 
 // ---------------------------------------------------------------------- Numbers ---

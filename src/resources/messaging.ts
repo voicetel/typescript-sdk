@@ -99,4 +99,82 @@ export class MessagingService {
       ...opts,
     });
   }
+
+  /**
+   * Account-wide messaging health overview — the same view as the portal Messaging
+   * tab: summary counts (numbers, messaging on, healthy, needing attention, in
+   * progress), campaigns with carrier-review progress, numbers needing attention
+   * (each with a plain-language title, detail and fix-it actions), 14 days of
+   * delivery counts, and the alert-email setting. Updated hourly.
+   *
+   * The API spec defines no response schema for this endpoint, so the decoded JSON
+   * object is returned as-is.
+   */
+  health(opts?: { signal?: AbortSignal }): Promise<Record<string, unknown>> {
+    return this.t.request<Record<string, unknown>>({
+      method: "GET",
+      path: "/v2.2/messaging/health",
+      ...opts,
+    });
+  }
+
+  /**
+   * The alert-email setting: whether new messaging problems are emailed to the
+   * account. The spec defines no response schema, so the decoded JSON object is
+   * returned as-is.
+   */
+  healthAlerts(opts?: { signal?: AbortSignal }): Promise<Record<string, unknown>> {
+    return this.t.request<Record<string, unknown>>({
+      method: "GET",
+      path: "/v2.2/messaging/health/alerts",
+      ...opts,
+    });
+  }
+
+  /**
+   * Turn alert emails on or off. When enabled, the account is emailed as new
+   * messaging problems are found (at most one digest about every 20 hours). The
+   * spec defines no response schema, so the decoded JSON object is returned as-is.
+   */
+  setHealthAlerts(
+    enabled: boolean,
+    opts?: { signal?: AbortSignal },
+  ): Promise<Record<string, unknown>> {
+    return this.t.request<Record<string, unknown>>({
+      method: "PUT",
+      path: "/v2.2/messaging/health/alerts",
+      body: { enabled },
+      ...opts,
+    });
+  }
+
+  /**
+   * Live health check of one number: in service, messaging enabled, campaign
+   * approved, assigned to the campaign by the messaging provider, delivery failures
+   * in the last 24 hours, and enablement in progress. Limited to 30 checks per hour
+   * per account. The spec defines no response schema, so the decoded JSON object is
+   * returned as-is.
+   */
+  healthCheck(number: string, opts?: { signal?: AbortSignal }): Promise<Record<string, unknown>> {
+    return this.t.request<Record<string, unknown>>({
+      method: "POST",
+      path: "/v2.2/messaging/health/check",
+      body: { number },
+      ...opts,
+    });
+  }
+
+  /**
+   * Up to 3 recent outbound messages from the number that carriers blocked as spam
+   * (time, masked recipient, text, reason), to help review content. The spec defines
+   * no response schema, so the decoded JSON object is returned as-is.
+   */
+  healthSamples(number: string, opts?: { signal?: AbortSignal }): Promise<Record<string, unknown>> {
+    return this.t.request<Record<string, unknown>>({
+      method: "GET",
+      path: "/v2.2/messaging/health/samples",
+      query: { number },
+      ...opts,
+    });
+  }
 }
