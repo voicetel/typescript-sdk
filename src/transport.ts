@@ -1,5 +1,3 @@
-import { randomUUID } from "node:crypto";
-
 import { ApiError, kindFromStatus, type ApiErrorOptions } from "./errors.js";
 import { DEFAULT_BASE_URL, DEFAULT_USER_AGENT } from "./version.js";
 
@@ -109,7 +107,7 @@ export class Transport {
     };
     if (requireAuth) headers["Authorization"] = `Bearer ${this.apiKey}`;
     if (["POST", "PUT", "PATCH"].includes(spec.method)) {
-      headers["Idempotency-Key"] = randomUUID();
+      headers["Idempotency-Key"] = globalThis.crypto.randomUUID();
     }
     let bodyText: string | undefined;
     if (spec.body !== undefined) {
@@ -188,17 +186,26 @@ async function decode<T>(response: Response): Promise<T> {
   }
 
   let body: unknown = text;
-  let code: string | undefined;
+  let code: string | number | undefined;
   let message = `HTTP ${response.status}`;
   try {
     const parsed = JSON.parse(text);
     body = parsed;
     if (parsed && typeof parsed === "object") {
       const obj = parsed as Record<string, unknown>;
-      const c = obj["code"] ?? obj["error"];
-      if (typeof c === "string") code = c;
-      const m = obj["message"] ?? obj["error"];
-      if (typeof m === "string") message = m;
+      // Spec errorResponse envelope: { "status": "error", "error": { "code": <int>, "message": <string> } }
+      const nested = obj["error"];
+      if (nested && typeof nested === "object" && !Array.isArray(nested)) {
+        const errObj = nested as Record<string, unknown>;
+        if (typeof errObj["code"] === "number") code = errObj["code"];
+        if (typeof errObj["message"] === "string") message = errObj["message"];
+      } else {
+        // Legacy flat shape: { code?, message? } or { error: <string> }.
+        const c = obj["code"] ?? nested;
+        if (typeof c === "string" || typeof c === "number") code = c;
+        const m = obj["message"] ?? nested;
+        if (typeof m === "string") message = m;
+      }
     }
   } catch {
     /* leave body as text */
@@ -229,7 +236,7 @@ function backoffDelay(attempt: number, response: Response | null): number {
     const header = response.headers.get("Retry-After");
     if (header) {
       const secs = Number(header);
-      if (Number.isFinite(secs) && secs >= 0) return secs * 1000;
+      if (Number.isFinite(secs) && secs >= 0) return Math.min(8000, secs * 1000);
     }
   }
   return Math.min(8000, 500 * 2 ** attempt);

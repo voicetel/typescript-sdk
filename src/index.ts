@@ -9,7 +9,7 @@
  * import { VoiceTelClient } from "@voicetel.com/sdk";
  *
  * const client = new VoiceTelClient();
- * await client.login(1000000001, "hunter2");
+ * await client.login("1000000001", "hunter2");
  * const me = await client.account.get();
  * ```
  */

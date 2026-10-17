@@ -8,15 +8,17 @@ export interface CidrEntry {
 }
 
 /**
- * Generic error envelope returned for non-2xx responses.
+ * Generic error envelope returned for non-2xx responses, e.g.
+ * `{ "status": "error", "error": { "code": 400, "message": "Field Required: number" } }`.
  *
  * The SDK normally throws {@link ApiError} (which carries this object as
- * `error.body`) rather than returning it.
+ * `error.body`, and surfaces `error.code` / `error.message` directly) rather
+ * than returning it.
  */
 export interface ErrorResponse {
-  status?: string;
-  code?: string;
-  message?: string;
-  error?: string;
-  details?: Record<string, unknown>;
+  status: "error";
+  error: {
+    code: number;
+    message: string;
+  };
 }

@@ -150,13 +150,12 @@ export interface ConversationEmbedded {
  * A support ticket.
  *
  * Note: the wire field `number` is a ticket *sequence number* (#1015), NOT a
- * phone number. We expose it as `ticketNumber` to avoid confusion with
- * 10-digit TNs everywhere else in this API.
+ * phone number.
  */
 export interface SupportConversation {
   id?: number;
-  /** Human-readable ticket sequence shown to the customer (e.g. 1015). */
-  ticketNumber?: number;
+  /** Human-readable ticket sequence shown to the customer (e.g. "1015"). */
+  number?: string;
   status: TicketStatus;
   state?: string;
   subject?: string;
@@ -189,6 +188,8 @@ export interface TicketData {
 
 /** Response data for `GET /v2.2/support/tickets`. */
 export interface TicketsListData {
+  /** Total tickets matching the filter. */
+  totalCount?: number;
   tickets: SupportConversation[];
 }
 

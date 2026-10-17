@@ -40,12 +40,19 @@ describe("AccountService", () => {
         return ok({ updated: ["timezone"] });
       },
       "POST /v2.2/account": () => created({ username: "2", password: "p" }),
-      "POST /v2.2/accounts": () => created({ username: "3", password: "q" }),
+      "POST /v2.2/accounts": (req) => {
+        // Public endpoint — no bearer even though the client has one.
+        expect(req.headers["Authorization"]).toBeUndefined();
+        return created({ username: "3", password: "q" });
+      },
       "GET /v2.2/account/cdr": (req) => {
         expect(new URL(req.url).searchParams.get("start")).toBe("1");
         return ok({ start: 1, end: 2, cdr: [{ id: "r1", key: ["1", "2"], value: { dur: "40" } }] });
       },
-      "GET /v2.2/account/credits": () => ok({ credits: [{ amount: 25, date: "x", paid: false }] }),
+      "GET /v2.2/account/credits": (req) => {
+        expect(new URL(req.url).searchParams.get("status")).toBe("unpaid");
+        return ok({ credits: [{ amount: 25, date: "x", paid: false }] });
+      },
       "GET /v2.2/account/recurring-charges": () =>
         ok({ charges: [{ amount: 0.5, description: "DID" }], total: 0.5 }),
       "GET /v2.2/account/payments": () =>
@@ -58,11 +65,11 @@ describe("AccountService", () => {
     expect(me.cash).toBe(12.5);
     expect(me.services?.sms).toBe(true);
     expect((await client.account.update({ timezone: "UTC" })).updated).toEqual(["timezone"]);
-    expect((await client.account.add({ username: 2, name: "S", email: "s@x.com" })).password).toBe("p");
+    expect((await client.account.add({ username: "2", name: "S", email: "s@x.com" })).password).toBe("p");
     expect((await client.account.signup({ name: "S", email: "s@x.com" })).password).toBe("q");
     const cdr = await client.account.cdr({ start: 1, end: 2 });
     expect(cdr.cdr[0]!.value.dur).toBe("40");
-    expect((await client.account.credits()).credits[0]!.amount).toBe(25);
+    expect((await client.account.credits({ status: "unpaid" })).credits[0]!.amount).toBe(25);
     expect((await client.account.recurringCharges()).total).toBe(0.5);
     expect((await client.account.payments()).payments[0]!.status).toBe("Completed");
     expect((await client.account.registration()).agent).toBe("Zoiper");
@@ -77,12 +84,19 @@ describe("AclService", () => {
     const { client } = buildMockClient({
       "GET /v2.2/acl": () => ok({ acl: [{ cidr: "203.0.113.0/24" }] }),
       "POST /v2.2/acl": () => ok({ added: [{ cidr: "203.0.113.0/24" }] }),
-      "DELETE /v2.2/acl": () => ok({ removed: [{ cidr: "203.0.113.0/24" }] }),
+      "DELETE /v2.2/acl": (req) => {
+        // No body — the CIDRs go out as a comma-separated query parameter.
+        expect(req.body).toBeUndefined();
+        expect(new URL(req.url).searchParams.get("cidrs")).toBe("203.0.113.0/24,203.0.113.9/32");
+        return ok({ removed: [{ cidr: "203.0.113.0/24" }] });
+      },
     });
     const body: AclModifyRequest = { acl: [{ cidr: "203.0.113.0/24" }] };
     expect((await client.acl.list()).acl[0]!.cidr).toBe("203.0.113.0/24");
     expect((await client.acl.add(body)).added[0]!.cidr).toBe("203.0.113.0/24");
-    expect((await client.acl.remove(body)).removed[0]!.cidr).toBe("203.0.113.0/24");
+    expect((await client.acl.remove(["203.0.113.0/24", "203.0.113.9/32"])).removed[0]!.cidr).toBe(
+      "203.0.113.0/24",
+    );
   });
 });
 
@@ -210,8 +224,14 @@ describe("LookupsService", () => {
 describe("MessagingService", () => {
   it("walks the full surface", async () => {
     const { client } = buildMockClient({
-      "GET /v2.2/messages": () =>
-        ok({ number: "2015550100", type: "sms", fromTs: 1, toTs: 2, messages: [] }),
+      "GET /v2.2/messages": (req) => {
+        const q = new URL(req.url).searchParams;
+        expect(q.get("number")).toBe("2015550100");
+        expect(q.get("from")).toBe("2");
+        expect(q.get("to")).toBe("1");
+        expect(q.get("type")).toBe("sms");
+        return ok({ number: "2015550100", type: "sms", fromTs: 2, toTs: 1, messages: [] });
+      },
       "POST /v2.2/messages": () =>
         created({
           id: "x",
@@ -222,8 +242,9 @@ describe("MessagingService", () => {
         }),
       "POST /v2.2/messaging/brands": () =>
         created({ result: { statusCode: "200", status: "Success" } }),
-      "GET /v2.2/messaging/campaigns": () =>
-        ok({
+      "GET /v2.2/messaging/campaigns": (req) => {
+        expect(new URL(req.url).searchParams.get("ids")).toBe("C1,C2");
+        return ok({
           campaigns: [
             {
               id: "C1",
@@ -249,7 +270,8 @@ describe("MessagingService", () => {
               dca: null,
             },
           ],
-        }),
+        });
+      },
       "POST /v2.2/messaging/campaigns": () =>
         created({ result: { statusCode: "200", status: "Success" } }),
       "GET /v2.2/numbers/messaging": () => ok({ numbers: [] }),
@@ -260,7 +282,9 @@ describe("MessagingService", () => {
       toNumber: "2015550123",
       text: "hi",
     };
-    expect((await client.messaging.history({ number: "2015550100" })).type).toBe("sms");
+    expect(
+      (await client.messaging.history({ number: "2015550100", from: 2, to: 1, type: "sms" })).type,
+    ).toBe("sms");
     expect((await client.messaging.send(send)).id).toBe("x");
     expect(
       (
@@ -270,7 +294,7 @@ describe("MessagingService", () => {
         })
       ).result.status,
     ).toBe("Success");
-    const campaigns = (await client.messaging.campaignStatus()).campaigns;
+    const campaigns = (await client.messaging.campaignStatus(["C1", "C2"])).campaigns;
     expect(campaigns[0]!.id).toBe("C1");
     expect(campaigns[0]!.dca!.electionComplete).toBe(true);
     expect(campaigns[0]!.dca!.carriers[0]!.carrier).toBe("T-Mobile");
@@ -285,7 +309,6 @@ describe("MessagingService", () => {
       ).result.status,
     ).toBe("Success");
     expect((await client.messaging.numbersState(["2015550123"])).numbers).toEqual([]);
-    expect((await client.messaging.numbersState()).numbers).toEqual([]);
   });
 
   it("walks the messaging-health surface (v2.2.15, raw responses)", async () => {
@@ -302,16 +325,18 @@ describe("MessagingService", () => {
       },
       "GET /v2.2/messaging/health/samples": (req) => {
         expect(new URL(req.url).searchParams.get("number")).toBe("2125550123");
-        return ok({ samples: [] });
+        return ok([{ time: "2026-10-13T09:30:00Z", text: "hi", reason: "spam" }]);
       },
     });
 
-    // The spec defines no response schema for these, so the SDK returns the decoded object as-is.
+    // The spec defines no response schema for these, so the SDK returns the decoded JSON as-is.
     expect((await client.messaging.health())["summary"]).toEqual({ numbers: 3, healthy: 2 });
     expect((await client.messaging.healthAlerts())["enabled"]).toBe(true);
     expect((await client.messaging.setHealthAlerts(false))["enabled"]).toBe(false);
     expect((await client.messaging.healthCheck("2125550123"))["inService"]).toBe(true);
-    expect((await client.messaging.healthSamples("2125550123"))["samples"]).toEqual([]);
+    const samples = await client.messaging.healthSamples("2125550123");
+    expect(Array.isArray(samples)).toBe(true);
+    expect(samples[0]).toEqual({ time: "2026-10-13T09:30:00Z", text: "hi", reason: "spam" });
   });
 });
 
@@ -383,22 +408,30 @@ describe("NumbersService", () => {
           previousNetwork: null,
           previousNetworkCleared: false,
         }),
-      "DELETE /v2.2/numbers/2015550123/messaging-campaign": () =>
-        ok({
+      "DELETE /v2.2/numbers/2015550123/messaging-campaign": (req) => {
+        expect(req.body).toBeUndefined();
+        expect(new URL(req.url).searchParams.get("campaignId")).toBe("C1");
+        return ok({
           number: "2015550123",
           campaignId: "C1",
           network: "A",
           upstreamCnpId: "CAMP004",
           unassigned: true,
-        }),
-      "DELETE /v2.2/numbers/messaging-campaign": () =>
-        ok({
+        });
+      },
+      "DELETE /v2.2/numbers/messaging-campaign": (req) => {
+        expect(req.body).toBeUndefined();
+        const q = new URL(req.url).searchParams;
+        expect(q.get("numbers")).toBe("2015550123,2015551235");
+        expect(q.get("campaignId")).toBe("C1");
+        return ok({
           campaignId: "C1",
           network: "A",
           upstreamCnpId: "CAMP004",
-          unassignedNumbers: ["2015550123"],
+          unassignedNumbers: ["2015550123", "2015551235"],
           failed: [],
-        }),
+        });
+      },
       "PATCH /v2.2/numbers/2015550123/port-out-pin": () =>
         ok({ number: "2015550123", portOutPin: "1234" }),
     });
@@ -437,10 +470,11 @@ describe("NumbersService", () => {
     expect((await client.numbers.patchMessaging("2015550123", pm)).updated).toEqual(["routeIn"]);
     const ac: NumberCampaignAssignRequest = { campaignId: "C1" };
     expect((await client.numbers.assignCampaign("2015550123", ac)).carrier).toBe(17);
-    expect((await client.numbers.unassignCampaign("2015550123")).unassigned).toBe(true);
-    expect((await client.numbers.bulkUnassignCampaign(["2015550123"])).unassignedNumbers).toEqual([
-      "2015550123",
-    ]);
+    expect((await client.numbers.unassignCampaign("2015550123", "C1")).unassigned).toBe(true);
+    expect(
+      (await client.numbers.bulkUnassignCampaign(["2015550123", "2015551235"], "C1"))
+        .unassignedNumbers,
+    ).toEqual(["2015550123", "2015551235"]);
     const pin: PortOutPinUpdateRequest = { pin: "1234" };
     expect((await client.numbers.setPortOutPin("2015550123", pin)).portOutPin).toBe("1234");
   });
@@ -450,9 +484,9 @@ describe("NumbersService", () => {
 
 describe("SupportService", () => {
   it("walks the full surface", async () => {
-    const ticket = { id: 1, status: "active" as const, subject: "S", ticketNumber: 1015 };
+    const ticket = { id: 1, status: "active" as const, subject: "S", number: "1015" };
     const { client } = buildMockClient({
-      "GET /v2.2/support/tickets": () => ok({ tickets: [ticket] }),
+      "GET /v2.2/support/tickets": () => ok({ totalCount: 1, tickets: [ticket] }),
       "POST /v2.2/support/tickets": () => created({ ticket }),
       "GET /v2.2/support/tickets/1": () => ok({ ticket }),
       "PUT /v2.2/support/tickets/1": () => ok({ id: 1, status: "success" }),
@@ -460,10 +494,12 @@ describe("SupportService", () => {
       "GET /v2.2/support/tickets/1/messages": () => ok({ messages: [] }),
       "POST /v2.2/support/tickets/1/replies": () => created({ message: "Reply added" }),
     });
-    expect((await client.support.list()).tickets[0]!.id).toBe(1);
+    const list = await client.support.list();
+    expect(list.totalCount).toBe(1);
+    expect(list.tickets[0]!.id).toBe(1);
     const create: TicketCreateRequest = { subject: "s", message: "m" };
     expect((await client.support.create(create)).ticket.subject).toBe("S");
-    expect((await client.support.get(1)).ticket.id).toBe(1);
+    expect((await client.support.get(1)).ticket.number).toBe("1015");
     const upd: TicketUpdateRequest = { status: "closed" };
     expect((await client.support.update(1, upd)).status).toBe("success");
     await expect(client.support.delete(1)).resolves.toBeUndefined();
@@ -478,8 +514,12 @@ describe("SupportService", () => {
 describe("INumberingService", () => {
   it("walks the full surface", async () => {
     const { client } = buildMockClient({
-      "GET /v2.2/inventory": () =>
-        ok({
+      "GET /v2.2/inventory": (req) => {
+        const q = new URL(req.url).searchParams;
+        expect(q.get("tnMask")).toBe("201555*");
+        expect(q.get("quantity")).toBe("10");
+        expect(q.get("province")).toBe("NJ");
+        return ok({
           numbers: [
             {
               number: "2015550103",
@@ -489,8 +529,14 @@ describe("INumberingService", () => {
               lata: "224",
             },
           ],
-        }),
-      "GET /v2.2/inventory/coverage": () => ok({ coverage: [{ count: 100, npa: "201" }] }),
+        });
+      },
+      "GET /v2.2/inventory/coverage": (req) => {
+        const q = new URL(req.url).searchParams;
+        expect(q.get("countBy")).toBe("npanxx");
+        expect(q.get("locState")).toBe("NJ");
+        return ok({ coverage: [{ count: 100, npa: "201" }] });
+      },
       "POST /v2.2/orders": () =>
         created({
           orderId: "1",
@@ -499,7 +545,7 @@ describe("INumberingService", () => {
           failed: [],
         }),
       "GET /v2.2/ports": () => ok({ ports: [{ id: "abc", status: "Complete" }] }),
-      "GET /v2.2/ports/42": () => ok({ port: { id: "abc", status: "Complete" } }),
+      "GET /v2.2/ports/a3a2a": () => ok({ port: { id: "abc", status: "Complete" } }),
       "POST /v2.2/ports": () =>
         created({
           pid: "a3a2a",
@@ -519,14 +565,15 @@ describe("INumberingService", () => {
         }),
     });
 
-    expect((await client.iNumbering.searchInventory({ state: "NJ", limit: 10 })).numbers[0]!.number).toBe(
-      "2015550103",
-    );
-    expect((await client.iNumbering.coverage({ state: "NJ" })).coverage[0]!.count).toBe(100);
+    expect(
+      (await client.iNumbering.searchInventory({ tnMask: "201555*", quantity: 10, province: "NJ" }))
+        .numbers[0]!.number,
+    ).toBe("2015550103");
+    expect((await client.iNumbering.coverage({ countBy: "npanxx", locState: "NJ" })).coverage[0]!.count).toBe(100);
     const order: OrderCreateRequest = { numbers: ["2015550123"] };
     expect((await client.iNumbering.order(order)).orderId).toBe("1");
     expect((await client.iNumbering.ports()).ports[0]!.id).toBe("abc");
-    expect((await client.iNumbering.port(42)).port.id).toBe("abc");
+    expect((await client.iNumbering.port("a3a2a")).port.id).toBe("abc");
     const port: PortSubmitRequest = {
       did: ["2015550123"],
       name: "Acme",

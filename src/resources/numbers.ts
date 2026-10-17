@@ -44,12 +44,12 @@ export class NumbersService {
   }
 
   get(number: string, opts?: { signal?: AbortSignal }): Promise<NumberDetail> {
-    return this.t.request<NumberDetail>({ method: "GET", path: `/v2.2/numbers/${number}`, ...opts });
+    return this.t.request<NumberDetail>({ method: "GET", path: `/v2.2/numbers/${encodeURIComponent(number)}`, ...opts });
   }
 
   /** Returns nothing on 204 No Content. */
   remove(number: string, opts?: { signal?: AbortSignal }): Promise<void> {
-    return this.t.request<void>({ method: "DELETE", path: `/v2.2/numbers/${number}`, ...opts });
+    return this.t.request<void>({ method: "DELETE", path: `/v2.2/numbers/${encodeURIComponent(number)}`, ...opts });
   }
 
   move(
@@ -59,7 +59,7 @@ export class NumbersService {
   ): Promise<NumberMoveData> {
     return this.t.request<NumberMoveData>({
       method: "PATCH",
-      path: `/v2.2/numbers/${number}`,
+      path: `/v2.2/numbers/${encodeURIComponent(number)}`,
       body,
       ...opts,
     });
@@ -69,7 +69,7 @@ export class NumbersService {
   release(number: string, opts?: { signal?: AbortSignal }): Promise<void> {
     return this.t.request<void>({
       method: "POST",
-      path: `/v2.2/numbers/${number}/release`,
+      path: `/v2.2/numbers/${encodeURIComponent(number)}/release`,
       ...opts,
     });
   }
@@ -81,7 +81,7 @@ export class NumbersService {
   ): Promise<NumberRouteData> {
     return this.t.request<NumberRouteData>({
       method: "PUT",
-      path: `/v2.2/numbers/${number}/route`,
+      path: `/v2.2/numbers/${encodeURIComponent(number)}/route`,
       body,
       ...opts,
     });
@@ -94,7 +94,7 @@ export class NumbersService {
   ): Promise<NumberTranslationData> {
     return this.t.request<NumberTranslationData>({
       method: "PUT",
-      path: `/v2.2/numbers/${number}/translation`,
+      path: `/v2.2/numbers/${encodeURIComponent(number)}/translation`,
       body,
       ...opts,
     });
@@ -107,7 +107,7 @@ export class NumbersService {
   ): Promise<NumberCnamData> {
     return this.t.request<NumberCnamData>({
       method: "PUT",
-      path: `/v2.2/numbers/${number}/cnam`,
+      path: `/v2.2/numbers/${encodeURIComponent(number)}/cnam`,
       body,
       ...opts,
     });
@@ -120,7 +120,7 @@ export class NumbersService {
   ): Promise<NumberLidbData> {
     return this.t.request<NumberLidbData>({
       method: "PUT",
-      path: `/v2.2/numbers/${number}/lidb`,
+      path: `/v2.2/numbers/${encodeURIComponent(number)}/lidb`,
       body,
       ...opts,
     });
@@ -129,7 +129,7 @@ export class NumbersService {
   getFax(number: string, opts?: { signal?: AbortSignal }): Promise<NumberFaxData> {
     return this.t.request<NumberFaxData>({
       method: "GET",
-      path: `/v2.2/numbers/${number}/fax`,
+      path: `/v2.2/numbers/${encodeURIComponent(number)}/fax`,
       ...opts,
     });
   }
@@ -141,7 +141,7 @@ export class NumbersService {
   ): Promise<NumberFaxData> {
     return this.t.request<NumberFaxData>({
       method: "PUT",
-      path: `/v2.2/numbers/${number}/fax`,
+      path: `/v2.2/numbers/${encodeURIComponent(number)}/fax`,
       body,
       ...opts,
     });
@@ -151,7 +151,7 @@ export class NumbersService {
   removeFax(number: string, opts?: { signal?: AbortSignal }): Promise<void> {
     return this.t.request<void>({
       method: "DELETE",
-      path: `/v2.2/numbers/${number}/fax`,
+      path: `/v2.2/numbers/${encodeURIComponent(number)}/fax`,
       ...opts,
     });
   }
@@ -163,7 +163,7 @@ export class NumbersService {
   ): Promise<NumberForwardData> {
     return this.t.request<NumberForwardData>({
       method: "PUT",
-      path: `/v2.2/numbers/${number}/forward`,
+      path: `/v2.2/numbers/${encodeURIComponent(number)}/forward`,
       body,
       ...opts,
     });
@@ -173,7 +173,7 @@ export class NumbersService {
   removeForward(number: string, opts?: { signal?: AbortSignal }): Promise<void> {
     return this.t.request<void>({
       method: "DELETE",
-      path: `/v2.2/numbers/${number}/forward`,
+      path: `/v2.2/numbers/${encodeURIComponent(number)}/forward`,
       ...opts,
     });
   }
@@ -181,7 +181,7 @@ export class NumbersService {
   getSms(number: string, opts?: { signal?: AbortSignal }): Promise<NumberSmsData> {
     return this.t.request<NumberSmsData>({
       method: "GET",
-      path: `/v2.2/numbers/${number}/sms`,
+      path: `/v2.2/numbers/${encodeURIComponent(number)}/sms`,
       ...opts,
     });
   }
@@ -193,7 +193,7 @@ export class NumbersService {
   ): Promise<NumberSmsData> {
     return this.t.request<NumberSmsData>({
       method: "PUT",
-      path: `/v2.2/numbers/${number}/sms`,
+      path: `/v2.2/numbers/${encodeURIComponent(number)}/sms`,
       body,
       ...opts,
     });
@@ -203,7 +203,7 @@ export class NumbersService {
   removeSms(number: string, opts?: { signal?: AbortSignal }): Promise<void> {
     return this.t.request<void>({
       method: "DELETE",
-      path: `/v2.2/numbers/${number}/sms`,
+      path: `/v2.2/numbers/${encodeURIComponent(number)}/sms`,
       ...opts,
     });
   }
@@ -211,7 +211,7 @@ export class NumbersService {
   getMessaging(number: string, opts?: { signal?: AbortSignal }): Promise<NumberMessagingState> {
     return this.t.request<NumberMessagingState>({
       method: "GET",
-      path: `/v2.2/numbers/${number}/messaging`,
+      path: `/v2.2/numbers/${encodeURIComponent(number)}/messaging`,
       ...opts,
     });
   }
@@ -224,7 +224,7 @@ export class NumbersService {
   ): Promise<NumberMessagingPatchData> {
     return this.t.request<NumberMessagingPatchData>({
       method: "PATCH",
-      path: `/v2.2/numbers/${number}/messaging`,
+      path: `/v2.2/numbers/${encodeURIComponent(number)}/messaging`,
       body,
       ...opts,
     });
@@ -243,7 +243,7 @@ export class NumbersService {
   ): Promise<NumberMessagingCampaignAssignData> {
     return this.t.request<NumberMessagingCampaignAssignData>({
       method: "PUT",
-      path: `/v2.2/numbers/${number}/messaging-campaign`,
+      path: `/v2.2/numbers/${encodeURIComponent(number)}/messaging-campaign`,
       body,
       ...opts,
     });
@@ -251,23 +251,27 @@ export class NumbersService {
 
   unassignCampaign(
     number: string,
+    campaignId: string,
     opts?: { signal?: AbortSignal },
   ): Promise<NumberMessagingCampaignUnassignData> {
     return this.t.request<NumberMessagingCampaignUnassignData>({
       method: "DELETE",
-      path: `/v2.2/numbers/${number}/messaging-campaign`,
+      path: `/v2.2/numbers/${encodeURIComponent(number)}/messaging-campaign`,
+      query: { campaignId },
       ...opts,
     });
   }
 
+  /** Remove up to 10 numbers from the given campaign in one call. */
   bulkUnassignCampaign(
     numbers: string[],
+    campaignId: string,
     opts?: { signal?: AbortSignal },
   ): Promise<NumbersMessagingCampaignUnassignData> {
     return this.t.request<NumbersMessagingCampaignUnassignData>({
       method: "DELETE",
       path: "/v2.2/numbers/messaging-campaign",
-      body: { numbers },
+      query: { numbers: numbers.join(","), campaignId },
       ...opts,
     });
   }
@@ -279,7 +283,7 @@ export class NumbersService {
   ): Promise<PortOutPinUpdateData> {
     return this.t.request<PortOutPinUpdateData>({
       method: "PATCH",
-      path: `/v2.2/numbers/${number}/port-out-pin`,
+      path: `/v2.2/numbers/${encodeURIComponent(number)}/port-out-pin`,
       body,
       ...opts,
     });

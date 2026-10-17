@@ -63,11 +63,12 @@ export class VoiceTelClient {
    * Exchange username + password for a 32-hex API key and install it on this
    * client.
    *
-   * The exchange counts against the 6 req/hour/IP rate limit shared by every
-   * `account/*` endpoint (cdr, mrc, payments, registration, api-key).
+   * The exchange counts against the 6 req/hour/IP rate limit shared with
+   * `GET /v2.2/account`, `GET /v2.2/account/cdr`, and
+   * `GET /v2.2/account/recurring-charges`.
    */
   async login(
-    username: number,
+    username: string,
     password: string,
     opts?: { signal?: AbortSignal },
   ): Promise<string> {

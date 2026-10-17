@@ -2,8 +2,8 @@
 
 The official TypeScript / JavaScript client for the [VoiceTel REST API](https://voicetel.com/docs/api/v2.2/) — provision numbers, place orders, validate e911, send messages, and manage your account, with end-to-end TypeScript types and zero external dependencies.
 
-![Version](https://img.shields.io/badge/version-2.2.15-blue)
-![Node](https://img.shields.io/badge/node-%E2%89%A518-blue)
+![Version](https://img.shields.io/badge/version-2.2.16-blue)
+![Node](https://img.shields.io/badge/node-%E2%89%A520-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Coverage](https://img.shields.io/badge/coverage-96%25-brightgreen)
 ![Typed](https://img.shields.io/badge/typed-strict-blue)
@@ -28,14 +28,14 @@ The official TypeScript / JavaScript client for the [VoiceTel REST API](https://
 ## ✨ Features
 
 ### 🛡️ Strongly Typed End-to-End
-- **TypeScript interfaces** for every one of the 73 API operations — request bodies, response payloads, and entity types.
+- **TypeScript interfaces** for every one of the 79 API operations — request bodies, response payloads, and entity types.
 - **Strict mode-friendly.** Authored against `strict`, `noUncheckedIndexedAccess`, and `exactOptionalPropertyTypes` style rules.
 - **Autocomplete everywhere.** Your IDE knows the shape of every field — no more guessing what's in `result.data.numbers`.
 
 ### ⚡ Modern Runtime
 - Built on the standard **`fetch`** API. No `node-fetch`, no `axios`, no third-party HTTP dependency.
 - Pure **ESM** with a **CJS fallback** — works with `import` and `require`.
-- Runs unchanged in **Node.js 18+**, **Deno**, **Bun**, and modern **browsers**.
+- Runs unchanged in **Node.js 20+**, **Deno**, **Bun**, and modern **browsers**.
 
 ### 🔁 Production-Grade Transport
 - **Automatic retry** with exponential backoff on 429 / 5xx — honors `Retry-After` headers, capped at 8s.
@@ -57,7 +57,7 @@ The official TypeScript / JavaScript client for the [VoiceTel REST API](https://
 - **Authentication** — switch between Digest, IP-only, or hybrid modes; rotate passwords.
 
 ### 🧪 Battle-Tested
-- **40 tests** at **96% statement coverage** with `vitest`.
+- **43 tests** at **96% statement coverage** with `vitest`.
 - **Mocked fetch** + every method and error path covered.
 - **Strict TypeScript** with `tsc --noEmit` enforced in CI.
 
@@ -76,7 +76,7 @@ pnpm add @voicetel.com/sdk
 yarn add @voicetel.com/sdk
 ```
 
-Requires Node.js 18 or later (for the global `fetch` API). Browsers and Deno/Bun work without polyfills.
+Requires Node.js 20 or later (for the global `fetch` API). Browsers and Deno/Bun work without polyfills.
 
 ## 🏁 Quickstart
 
@@ -86,7 +86,7 @@ import { VoiceTelClient } from "@voicetel.com/sdk";
 const client = new VoiceTelClient();
 
 // Exchange username + password for an API key (one-time per session)
-await client.login(1000000001, "hunter2");
+await client.login("1000000001", "hunter2");
 
 // Typed responses — your editor knows what `me` is.
 const me = await client.account.get();
@@ -103,7 +103,7 @@ Or, if you already have an API key:
 
 ```ts
 const client = new VoiceTelClient({ apiKey: "32hex..." });
-const { coverage } = await client.iNumbering.coverage({ state: "NJ" });
+const { coverage } = await client.iNumbering.coverage({ countBy: "npanxx", locState: "NJ" });
 for (const bucket of coverage) {
   console.log(`${bucket.npa}-${bucket.nxx}: ${bucket.count} TNs available`);
 }
@@ -119,7 +119,7 @@ Re-fetch the API key after any password change — the old one is invalidated.
 
 ```ts
 const client = new VoiceTelClient();
-const key = await client.login(1000000001, "hunter2");
+const key = await client.login("1000000001", "hunter2");
 // `key` is the new 32-hex bearer; the client already has it installed.
 ```
 
@@ -132,7 +132,7 @@ const key = await client.login(1000000001, "hunter2");
 | Authentication | `client.authentication` | `client.authentication.update({ authType: 1 })` |
 | e911 | `client.e911` | `client.e911.validate({ address1, ... })` |
 | Gateways | `client.gateways` | `client.gateways.list()` |
-| iNumbering | `client.iNumbering` | `client.iNumbering.searchInventory({ npa: 201 })` |
+| iNumbering | `client.iNumbering` | `client.iNumbering.searchInventory({ tnMask: "201555*" })` |
 | Lookups | `client.lookups` | `client.lookups.lrn("2015550123", "2015550100")` |
 | Messaging | `client.messaging` | `client.messaging.send({ fromNumber, toNumber, text })` |
 | Numbers | `client.numbers` | `client.numbers.assignCampaign("2015550123", { campaignId })` |
@@ -258,9 +258,6 @@ npm install
 
 # Type check
 npm run typecheck
-
-# Lint
-npm run lint
 
 # Tests
 npm test

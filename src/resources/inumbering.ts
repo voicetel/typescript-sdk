@@ -13,20 +13,33 @@ import type {
 
 /** Filters for {@link INumberingService.searchInventory}. */
 export interface InventoryQuery {
-  npa?: number;
-  nxx?: number;
-  state?: string;
-  ratecenter?: string;
-  contains?: string;
-  endswith?: string;
-  limit?: number;
+  /** Prefix or wildcard pattern; `201`, `201555`, `201555*`. */
+  tnMask: string;
+  /** Maximum results, 1–1000. Defaults to 10. */
+  quantity?: number;
+  /** 2-letter US state or Canadian province code. */
+  province?: string;
+  /** Rate-center name. */
+  rateCenter?: string;
+  /** LATA code. */
+  lata?: string;
   signal?: AbortSignal;
 }
 
 /** Filters for {@link INumberingService.coverage}. */
 export interface CoverageQuery {
-  state?: string;
-  ratecenter?: string;
+  /** Aggregation dimension. */
+  countBy: "state" | "city" | "rateCenter" | "npanxx" | "block";
+  /** Filter: state or province code (e.g. NJ). */
+  locState?: string;
+  /** Filter: city name. */
+  city?: string;
+  /** Filter: rate-center abbreviation. */
+  rcAbbre?: string;
+  /** Filter: area code. */
+  npa?: string;
+  /** Filter: LATA code. */
+  lata?: string;
   signal?: AbortSignal;
 }
 
@@ -34,32 +47,37 @@ export interface CoverageQuery {
 export class INumberingService {
   constructor(private readonly t: Transport) {}
 
-  searchInventory(args: InventoryQuery = {}): Promise<InventorySearchData> {
+  searchInventory(args: InventoryQuery): Promise<InventorySearchData> {
     const opts: { signal?: AbortSignal } = {};
     if (args.signal) opts.signal = args.signal;
     return this.t.request<InventorySearchData>({
       method: "GET",
       path: "/v2.2/inventory",
       query: {
-        npa: args.npa,
-        nxx: args.nxx,
-        state: args.state,
-        ratecenter: args.ratecenter,
-        contains: args.contains,
-        endswith: args.endswith,
-        limit: args.limit,
+        tnMask: args.tnMask,
+        quantity: args.quantity,
+        province: args.province,
+        rateCenter: args.rateCenter,
+        lata: args.lata,
       },
       ...opts,
     });
   }
 
-  coverage(args: CoverageQuery = {}): Promise<InventoryCoverageData> {
+  coverage(args: CoverageQuery): Promise<InventoryCoverageData> {
     const opts: { signal?: AbortSignal } = {};
     if (args.signal) opts.signal = args.signal;
     return this.t.request<InventoryCoverageData>({
       method: "GET",
       path: "/v2.2/inventory/coverage",
-      query: { state: args.state, ratecenter: args.ratecenter },
+      query: {
+        countBy: args.countBy,
+        locState: args.locState,
+        city: args.city,
+        rcAbbre: args.rcAbbre,
+        npa: args.npa,
+        lata: args.lata,
+      },
       ...opts,
     });
   }
@@ -79,8 +97,13 @@ export class INumberingService {
     return this.t.request<PortListData>({ method: "GET", path: "/v2.2/ports", ...opts });
   }
 
-  port(id: number, opts?: { signal?: AbortSignal }): Promise<PortDetailData> {
-    return this.t.request<PortDetailData>({ method: "GET", path: `/v2.2/ports/${id}`, ...opts });
+  /** `id` is the 5-character alphanumeric pid from the port list response. */
+  port(id: string, opts?: { signal?: AbortSignal }): Promise<PortDetailData> {
+    return this.t.request<PortDetailData>({
+      method: "GET",
+      path: `/v2.2/ports/${encodeURIComponent(id)}`,
+      ...opts,
+    });
   }
 
   submitPort(
@@ -96,7 +119,7 @@ export class INumberingService {
   ): Promise<PortAvailabilityData> {
     return this.t.request<PortAvailabilityData>({
       method: "GET",
-      path: `/v2.2/ports/availability/${number}`,
+      path: `/v2.2/ports/availability/${encodeURIComponent(number)}`,
       ...opts,
     });
   }

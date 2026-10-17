@@ -34,9 +34,16 @@ export const created = (data: unknown): Reply => ({
 
 export const noContent: Reply = { status: 204 };
 
-export const errorReply = (status: number, code?: string, message?: string): Reply => ({
+/**
+ * Error response in the spec's `errorResponse` envelope:
+ * `{ "status": "error", "error": { "code": <int>, "message": <string> } }`.
+ */
+export const errorReply = (status: number, code?: number, message?: string): Reply => ({
   status,
-  body: JSON.stringify({ code, message: message ?? `HTTP ${status}` }),
+  body: JSON.stringify({
+    status: "error",
+    error: { code: code ?? status, message: message ?? `HTTP ${status}` },
+  }),
 });
 
 /**

@@ -15,7 +15,8 @@ export type ErrorKind =
 export interface ApiErrorOptions {
   kind?: ErrorKind;
   statusCode?: number;
-  code?: string;
+  /** Server-supplied error code — an integer in the spec's `errorResponse` envelope. */
+  code?: string | number;
   body?: unknown;
   cause?: unknown;
 }
@@ -32,7 +33,7 @@ export interface ApiErrorOptions {
 export class ApiError extends Error {
   readonly kind: ErrorKind;
   readonly statusCode: number;
-  readonly code: string | undefined;
+  readonly code: string | number | undefined;
   readonly body: unknown;
 
   constructor(message: string, options: ApiErrorOptions = {}) {

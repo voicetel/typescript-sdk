@@ -20,7 +20,7 @@ export class GatewaysService {
   }
 
   get(id: number, opts?: { signal?: AbortSignal }): Promise<GatewayEntry> {
-    return this.t.request<GatewayEntry>({ method: "GET", path: `/v2.2/gateways/${id}`, ...opts });
+    return this.t.request<GatewayEntry>({ method: "GET", path: `/v2.2/gateways/${encodeURIComponent(id)}`, ...opts });
   }
 
   update(
@@ -30,7 +30,7 @@ export class GatewaysService {
   ): Promise<GatewayEntry> {
     return this.t.request<GatewayEntry>({
       method: "PUT",
-      path: `/v2.2/gateways/${id}`,
+      path: `/v2.2/gateways/${encodeURIComponent(id)}`,
       body,
       ...opts,
     });
@@ -38,13 +38,13 @@ export class GatewaysService {
 
   /** Returns nothing on 204 No Content. */
   remove(id: number, opts?: { signal?: AbortSignal }): Promise<void> {
-    return this.t.request<void>({ method: "DELETE", path: `/v2.2/gateways/${id}`, ...opts });
+    return this.t.request<void>({ method: "DELETE", path: `/v2.2/gateways/${encodeURIComponent(id)}`, ...opts });
   }
 
   numbers(id: number, opts?: { signal?: AbortSignal }): Promise<GatewayNumbersData> {
     return this.t.request<GatewayNumbersData>({
       method: "GET",
-      path: `/v2.2/gateways/${id}/numbers`,
+      path: `/v2.2/gateways/${encodeURIComponent(id)}/numbers`,
       ...opts,
     });
   }

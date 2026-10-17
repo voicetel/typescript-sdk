@@ -57,7 +57,7 @@ export interface MessageRecordValue {
   /** Billed rate per message — string for precision (sms/mms only). */
   rate?: string;
   /** Far-end number (sms/mms only). */
-  number?: number;
+  number?: string;
   /** Message body (sms/mms only). */
   message?: string;
 }

@@ -6,14 +6,14 @@ export class LookupsService {
   constructor(private readonly t: Transport) {}
 
   cnam(number: string, opts?: { signal?: AbortSignal }): Promise<CnamData> {
-    return this.t.request<CnamData>({ method: "GET", path: `/v2.2/cnam/${number}`, ...opts });
+    return this.t.request<CnamData>({ method: "GET", path: `/v2.2/cnam/${encodeURIComponent(number)}`, ...opts });
   }
 
   /** `ani` is the presented caller ANI (10-digit TN), used only for billing/auth. */
   lrn(number: string, ani: string, opts?: { signal?: AbortSignal }): Promise<LrnLookupData> {
     return this.t.request<LrnLookupData>({
       method: "GET",
-      path: `/v2.2/lrn/${number}/${ani}`,
+      path: `/v2.2/lrn/${encodeURIComponent(number)}/${encodeURIComponent(ani)}`,
       ...opts,
     });
   }

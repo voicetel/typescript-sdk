@@ -15,16 +15,22 @@ import type { NumbersMessagingListData } from "../models/numbers.js";
 export class MessagingService {
   constructor(private readonly t: Transport) {}
 
-  /** Fetch message history. Filter by number/type and/or `[start, end]` Unix timestamps. */
-  history(
-    args: {
-      number?: string;
-      start?: number;
-      end?: number;
-      type?: "sms" | "mms" | "dlr";
-      signal?: AbortSignal;
-    } = {},
-  ): Promise<MessageHistoryData> {
+  /**
+   * Fetch message history for one number. `from` / `to` are Unix timestamps —
+   * `from` is the newer end of the range (defaults to now), `to` the older end
+   * (defaults to 24h ago).
+   */
+  history(args: {
+    /** 10-digit telephone number on the authenticated account. */
+    number: string;
+    /** Unix timestamp range start (newer). Defaults to now. */
+    from?: number;
+    /** Unix timestamp range end (older). Defaults to 24h ago. */
+    to?: number;
+    /** `sms` (default), `mms`, or `dlr` (delivery status events). */
+    type?: "sms" | "mms" | "dlr";
+    signal?: AbortSignal;
+  }): Promise<MessageHistoryData> {
     const opts: { signal?: AbortSignal } = {};
     if (args.signal) opts.signal = args.signal;
     return this.t.request<MessageHistoryData>({
@@ -32,8 +38,8 @@ export class MessagingService {
       path: "/v2.2/messages",
       query: {
         number: args.number,
-        start: args.start,
-        end: args.end,
+        from: args.from,
+        to: args.to,
         type: args.type,
       },
       ...opts,
@@ -63,11 +69,15 @@ export class MessagingService {
     });
   }
 
-  /** Current 10DLC campaign statuses on the account. */
-  campaignStatus(opts?: { signal?: AbortSignal }): Promise<MessagingCampaignStatusData> {
+  /** Current 10DLC campaign statuses. `ids` are the alphanumeric campaign ids to query (max 100). */
+  campaignStatus(
+    ids: string[],
+    opts?: { signal?: AbortSignal },
+  ): Promise<MessagingCampaignStatusData> {
     return this.t.request<MessagingCampaignStatusData>({
       method: "GET",
       path: "/v2.2/messaging/campaigns",
+      query: { ids: ids.join(",") },
       ...opts,
     });
   }
@@ -85,17 +95,12 @@ export class MessagingService {
     });
   }
 
-  /** Read messaging state for many numbers at once. Empty `numbers` = all on account. */
-  numbersState(
-    numbers?: string[],
-    opts?: { signal?: AbortSignal },
-  ): Promise<NumbersMessagingListData> {
-    const query: Record<string, string | undefined> = {};
-    if (numbers && numbers.length > 0) query.numbers = numbers.join(",");
+  /** Read messaging state for many numbers at once (max 1000). */
+  numbersState(numbers: string[], opts?: { signal?: AbortSignal }): Promise<NumbersMessagingListData> {
     return this.t.request<NumbersMessagingListData>({
       method: "GET",
       path: "/v2.2/numbers/messaging",
-      query,
+      query: { numbers: numbers.join(",") },
       ...opts,
     });
   }
@@ -167,10 +172,14 @@ export class MessagingService {
   /**
    * Up to 3 recent outbound messages from the number that carriers blocked as spam
    * (time, masked recipient, text, reason), to help review content. The spec defines
-   * no response schema, so the decoded JSON object is returned as-is.
+   * no response schema for the individual samples, so the decoded JSON array is
+   * returned as-is.
    */
-  healthSamples(number: string, opts?: { signal?: AbortSignal }): Promise<Record<string, unknown>> {
-    return this.t.request<Record<string, unknown>>({
+  healthSamples(
+    number: string,
+    opts?: { signal?: AbortSignal },
+  ): Promise<Record<string, unknown>[]> {
+    return this.t.request<Record<string, unknown>[]>({
       method: "GET",
       path: "/v2.2/messaging/health/samples",
       query: { number },

@@ -37,7 +37,7 @@ export class E911Service {
   }
 
   get(dn: string, opts?: { signal?: AbortSignal }): Promise<E911RecordData> {
-    return this.t.request<E911RecordData>({ method: "GET", path: `/v2.2/e911/${dn}`, ...opts });
+    return this.t.request<E911RecordData>({ method: "GET", path: `/v2.2/e911/${encodeURIComponent(dn)}`, ...opts });
   }
 
   provision(
@@ -47,7 +47,7 @@ export class E911Service {
   ): Promise<E911RecordData> {
     return this.t.request<E911RecordData>({
       method: "PUT",
-      path: `/v2.2/e911/${dn}`,
+      path: `/v2.2/e911/${encodeURIComponent(dn)}`,
       body,
       ...opts,
     });
@@ -55,6 +55,6 @@ export class E911Service {
 
   /** Returns nothing on 204 No Content. */
   remove(dn: string, opts?: { signal?: AbortSignal }): Promise<void> {
-    return this.t.request<void>({ method: "DELETE", path: `/v2.2/e911/${dn}`, ...opts });
+    return this.t.request<void>({ method: "DELETE", path: `/v2.2/e911/${encodeURIComponent(dn)}`, ...opts });
   }
 }

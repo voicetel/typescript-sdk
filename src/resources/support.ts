@@ -34,7 +34,7 @@ export class SupportService {
   get(id: number, opts?: { signal?: AbortSignal }): Promise<TicketData> {
     return this.t.request<TicketData>({
       method: "GET",
-      path: `/v2.2/support/tickets/${id}`,
+      path: `/v2.2/support/tickets/${encodeURIComponent(id)}`,
       ...opts,
     });
   }
@@ -46,7 +46,7 @@ export class SupportService {
   ): Promise<TicketUpdateData> {
     return this.t.request<TicketUpdateData>({
       method: "PUT",
-      path: `/v2.2/support/tickets/${id}`,
+      path: `/v2.2/support/tickets/${encodeURIComponent(id)}`,
       body,
       ...opts,
     });
@@ -56,7 +56,7 @@ export class SupportService {
   delete(id: number, opts?: { signal?: AbortSignal }): Promise<void> {
     return this.t.request<void>({
       method: "DELETE",
-      path: `/v2.2/support/tickets/${id}`,
+      path: `/v2.2/support/tickets/${encodeURIComponent(id)}`,
       ...opts,
     });
   }
@@ -64,7 +64,7 @@ export class SupportService {
   messages(id: number, opts?: { signal?: AbortSignal }): Promise<TicketThreadsData> {
     return this.t.request<TicketThreadsData>({
       method: "GET",
-      path: `/v2.2/support/tickets/${id}/messages`,
+      path: `/v2.2/support/tickets/${encodeURIComponent(id)}/messages`,
       ...opts,
     });
   }
@@ -76,7 +76,7 @@ export class SupportService {
   ): Promise<TicketReplyData> {
     return this.t.request<TicketReplyData>({
       method: "POST",
-      path: `/v2.2/support/tickets/${id}/replies`,
+      path: `/v2.2/support/tickets/${encodeURIComponent(id)}/replies`,
       body,
       ...opts,
     });

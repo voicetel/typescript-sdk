@@ -28,8 +28,6 @@ export interface AccountServices {
   bypassMedia?: boolean;
   /** International calling enabled. */
   intl?: boolean;
-  /** Remote Caller ID display enabled. */
-  rcid?: boolean;
   mms?: boolean;
   dialer?: boolean;
   sms?: boolean;
@@ -162,17 +160,16 @@ export interface AccountRegistrationData {
   agent?: string;
   /** SIP URI of the registered endpoint. */
   uri?: string;
-  /** Seconds until the registration expires. */
-  expires?: number;
 }
 
 /** Body for `POST /v2.2/account` (admin-only sub-account creation). */
 export interface AccountAddRequest {
-  username: number;
+  /** 10-digit numeric username. */
+  username: string;
   name: string;
   email: string;
   /** Billing account. Defaults to `username`. */
-  masterAccount?: number;
+  masterAccount?: string;
 }
 
 /** Response data for `POST /v2.2/account`. */

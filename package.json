@@ -1,6 +1,6 @@
 {
   "name": "@voicetel.com/sdk",
-  "version": "2.2.15",
+  "version": "2.2.16",
   "description": "Official TypeScript / JavaScript SDK for the VoiceTel REST API",
   "type": "module",
   "main": "./dist/index.cjs",

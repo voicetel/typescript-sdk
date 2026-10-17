@@ -18,7 +18,7 @@ describe.skipIf(skip)("integration (live API, read-only)", () => {
 
   beforeAll(async () => {
     client = new VoiceTelClient({ baseUrl: baseUrl || undefined });
-    await client.login(Number(username), password!);
+    await client.login(username!, password!);
   });
 
   it("login installs an API key", () => {

@@ -17,8 +17,8 @@ describe("client construction", () => {
     const c = new VoiceTelClient();
     expect(c.baseUrl).toBe(DEFAULT_BASE_URL);
     expect(c.apiKey).toBe("");
-    expect(SDK_VERSION).toBe("2.2.15");
-    expect(API_VERSION).toBe("v2.2.15");
+    expect(SDK_VERSION).toBe("2.2.16");
+    expect(API_VERSION).toBe("v2.2.16");
   });
 
   it("strips trailing slash from baseUrl", () => {
@@ -79,9 +79,42 @@ describe("error mapping", () => {
     [418, "unknown"],
   ])("maps HTTP %d -> kind %s", async (status, kind) => {
     const { client } = buildMockClient({
-      "GET /v2.2/account": () => errorReply(status, "X", "boom"),
+      "GET /v2.2/account": () => errorReply(status, status, "boom"),
     });
     await expect(client.account.get()).rejects.toMatchObject({ statusCode: status, kind });
+  });
+
+  it("parses the spec errorResponse envelope (nested numeric code + message)", async () => {
+    const { client } = buildMockClient({
+      "GET /v2.2/account": () => ({
+        status: 400,
+        body: JSON.stringify({
+          status: "error",
+          error: { code: 400, message: "Field Required: number" },
+        }),
+      }),
+    });
+    try {
+      await client.account.get();
+      expect.fail("should have thrown");
+    } catch (err) {
+      expect(err).toBeInstanceOf(ApiError);
+      const apiErr = err as ApiError;
+      expect(apiErr.statusCode).toBe(400);
+      expect(apiErr.kind).toBe("bad_request");
+      expect(apiErr.code).toBe(400);
+      expect(apiErr.message).toBe("Field Required: number");
+    }
+  });
+
+  it("still parses the legacy flat { code, message } error shape", async () => {
+    const { client } = buildMockClient({
+      "GET /v2.2/account": () => ({
+        status: 400,
+        body: JSON.stringify({ code: "X", message: "boom" }),
+      }),
+    });
+    await expect(client.account.get()).rejects.toMatchObject({ code: "X", message: "boom" });
   });
 
   it("falls back to text body when the response isn't JSON", async () => {
@@ -147,7 +180,7 @@ describe("login flow", () => {
       {
         "POST /v2.2/account/api-key": (req) => {
           expect(req.headers["Authorization"]).toBeUndefined();
-          expect(req.body).toEqual({ username: 1000000001, password: "pw" });
+          expect(req.body).toEqual({ username: "1000000001", password: "pw" });
           return ok({ apikey: "32hex" });
         },
         "GET /v2.2/account": (req) => {
@@ -157,7 +190,7 @@ describe("login flow", () => {
       },
       { apiKey: "" },
     );
-    const key = await client.login(1000000001, "pw");
+    const key = await client.login("1000000001", "pw");
     expect(key).toBe("32hex");
     expect(client.apiKey).toBe("32hex");
     await client.account.get();
@@ -169,7 +202,7 @@ describe("login flow", () => {
       { "POST /v2.2/account/api-key": () => ok({}) },
       { apiKey: "" },
     );
-    await expect(client.login(1, "p")).rejects.toMatchObject({ kind: "authentication" });
+    await expect(client.login("1", "p")).rejects.toMatchObject({ kind: "authentication" });
   });
 });
 

@@ -19,12 +19,13 @@ import type {
 /**
  * Operations under the `Account` tag.
  *
- * Note: `cdr`, `recurringCharges`, `payments`, `registration` and
- * `client.login()` share a 6 req/hour/IP rate limit. Bursting will trigger 429s.
+ * Note: `get`, `cdr`, `recurringCharges` and `client.login()` share a
+ * 6 req/hour/IP rate limit. Bursting will trigger 429s.
  */
 export class AccountService {
   constructor(private readonly t: Transport) {}
 
+  /** Rate-limited (6/hr/IP). */
   get(opts?: { signal?: AbortSignal }): Promise<AccountData> {
     return this.t.request<AccountData>({ method: "GET", path: "/v2.2/account", ...opts });
   }
@@ -37,12 +38,13 @@ export class AccountService {
     return this.t.request<AccountAddData>({ method: "POST", path: "/v2.2/account", body, ...opts });
   }
 
-  /** Public sign-up flow. */
+  /** Public sign-up flow — no auth required. */
   signup(body: AccountSignupRequest, opts?: { signal?: AbortSignal }): Promise<AccountSignupData> {
     return this.t.request<AccountSignupData>({
       method: "POST",
       path: "/v2.2/accounts",
       body,
+      requireAuth: false,
       ...opts,
     });
   }
@@ -59,11 +61,14 @@ export class AccountService {
     });
   }
 
-  credits(opts?: { signal?: AbortSignal }): Promise<AccountCreditsData> {
+  credits(
+    args: { status?: "paid" | "unpaid"; signal?: AbortSignal } = {},
+  ): Promise<AccountCreditsData> {
     return this.t.request<AccountCreditsData>({
       method: "GET",
       path: "/v2.2/account/credits",
-      ...opts,
+      query: { status: args.status },
+      ...(args.signal && { signal: args.signal }),
     });
   }
 
@@ -76,7 +81,6 @@ export class AccountService {
     });
   }
 
-  /** Rate-limited (6/hr/IP). */
   payments(opts?: { signal?: AbortSignal }): Promise<AccountPaymentsData> {
     return this.t.request<AccountPaymentsData>({
       method: "GET",
@@ -85,7 +89,6 @@ export class AccountService {
     });
   }
 
-  /** Rate-limited (6/hr/IP). */
   registration(opts?: { signal?: AbortSignal }): Promise<AccountRegistrationData> {
     return this.t.request<AccountRegistrationData>({
       method: "GET",

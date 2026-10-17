@@ -13,7 +13,13 @@ export class AclService {
     return this.t.request<AclAddData>({ method: "POST", path: "/v2.2/acl", body, ...opts });
   }
 
-  remove(body: AclModifyRequest, opts?: { signal?: AbortSignal }): Promise<AclRemoveData> {
-    return this.t.request<AclRemoveData>({ method: "DELETE", path: "/v2.2/acl", body, ...opts });
+  /** Remove the given CIDR blocks (sent as a comma-separated `cidrs` query parameter). */
+  remove(cidrs: string[], opts?: { signal?: AbortSignal }): Promise<AclRemoveData> {
+    return this.t.request<AclRemoveData>({
+      method: "DELETE",
+      path: "/v2.2/acl",
+      query: { cidrs: cidrs.join(",") },
+      ...opts,
+    });
   }
 }
