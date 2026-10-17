@@ -2,7 +2,7 @@
 
 The official TypeScript / JavaScript client for the [VoiceTel REST API](https://voicetel.com/docs/api/v2.2/) — provision numbers, place orders, validate e911, send messages, and manage your account, with end-to-end TypeScript types and zero external dependencies.
 
-![Version](https://img.shields.io/badge/version-2.2.16-blue)
+![Version](https://img.shields.io/badge/version-2.2.17-blue)
 ![Node](https://img.shields.io/badge/node-%E2%89%A520-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Coverage](https://img.shields.io/badge/coverage-96%25-brightgreen)

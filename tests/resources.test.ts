@@ -364,7 +364,7 @@ describe("NumbersService", () => {
       "PATCH /v2.2/numbers/2015550123": () =>
         ok({ number: "2015550123", accountId: 99, route: 4 }),
       "POST /v2.2/numbers/2015550123/release": () => noContent,
-      "PUT /v2.2/numbers/2015550123/route": () => ok({ number: "2015550123", route: 7 }),
+      "PUT /v2.2/numbers/2015550123/route": () => ok({ number: "2015550123", route: 4 }),
       "PUT /v2.2/numbers/2015550123/translation": () =>
         ok({ number: "2015550123", translation: "2015551235" }),
       "PUT /v2.2/numbers/2015550123/cnam": () => ok({ number: "2015550123", cnam: true }),
@@ -444,8 +444,8 @@ describe("NumbersService", () => {
     const move: NumberMoveRequest = { accountId: 99, route: 4 };
     expect((await client.numbers.move("2015550123", move)).accountId).toBe(99);
     await expect(client.numbers.release("2015550123")).resolves.toBeUndefined();
-    const route: NumberRouteRequest = { route: 7 };
-    expect((await client.numbers.setRoute("2015550123", route)).route).toBe(7);
+    const route: NumberRouteRequest = { route: 4 };
+    expect((await client.numbers.setRoute("2015550123", route)).route).toBe(4);
     const tr: NumberTranslationRequest = { translation: "2015551235" };
     expect((await client.numbers.setTranslation("2015550123", tr)).translation).toBe(
       "2015551235",

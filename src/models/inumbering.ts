@@ -8,7 +8,7 @@ export type NameType = "business" | "residential";
 
 /**
  * Body for `POST /v2.2/orders`. `numbers` may contain plain TN strings or
- * `{ number, route }` objects to override the gateway per TN.
+ * `{ number, route }` objects to override the global route type per TN.
  *
  * Total entries: 1..100.
  */
@@ -19,7 +19,10 @@ export interface OrderCreateRequest {
 /** Per-number routing override inside {@link OrderCreateRequest}. */
 export interface OrderNumberSpec {
   number: PhoneNumber;
-  /** Gateway ID on this account; defaults to 4. */
+  /**
+   * Global route type: 1 USER, 2 T30, 3 VOICE_BRIDGE, 4 DID (default),
+   * 5 T38, 6 VOICEML, 8 SDN, 9 MOBILE. Route for numbers in this order.
+   */
   route?: number;
 }
 

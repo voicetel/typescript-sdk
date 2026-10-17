@@ -1,8 +1,8 @@
 /** SDK semantic version. */
-export const SDK_VERSION = "2.2.16";
+export const SDK_VERSION = "2.2.17";
 
 /** VoiceTel REST API version this SDK targets. */
-export const API_VERSION = "v2.2.16";
+export const API_VERSION = "v2.2.17";
 
 /** Production VoiceTel API endpoint. */
 export const DEFAULT_BASE_URL = "https://api.voicetel.com";

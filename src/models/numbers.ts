@@ -5,12 +5,19 @@ import type { PhoneNumber } from "./common.js";
 /** Body for `POST /v2.2/numbers`. */
 export interface NumberAddRequest {
   number: PhoneNumber;
-  /** Gateway route ID; defaults to 4 (DID). */
+  /**
+   * Global route type: 1 USER, 2 T30, 3 VOICE_BRIDGE, 4 DID (default),
+   * 5 T38, 6 VOICEML, 8 SDN, 9 MOBILE. Used when adding a number.
+   */
   route?: number;
 }
 
 /** Body for `PUT /v2.2/numbers/{number}/route`. */
 export interface NumberRouteRequest {
+  /**
+   * Global route type: 1 USER, 2 T30, 3 VOICE_BRIDGE, 4 DID (default),
+   * 5 T38, 6 VOICEML, 8 SDN, 9 MOBILE. Set with `PUT /v2.2/numbers/{number}/route`.
+   */
   route: number;
 }
 
@@ -93,7 +100,10 @@ export interface PortOutPinUpdateRequest {
 export interface NumberDetail {
   number: PhoneNumber;
   translated: PhoneNumber;
-  /** Gateway id the number is currently routed to. */
+  /**
+   * Global route type: 1 USER, 2 T30, 3 VOICE_BRIDGE, 4 DID (default),
+   * 5 T38, 6 VOICEML, 8 SDN, 9 MOBILE. Per-number route in the list.
+   */
   route: number;
   /** Gateway address (IP[:port]) or system route name. */
   gateway: string | null;
@@ -160,6 +170,10 @@ export interface NumberMessagingState {
 /** Response data for `POST /v2.2/numbers`. */
 export interface NumberAddData {
   number: PhoneNumber;
+  /**
+   * Global route type: 1 USER, 2 T30, 3 VOICE_BRIDGE, 4 DID (default),
+   * 5 T38, 6 VOICEML, 8 SDN, 9 MOBILE. Returned after adding a number.
+   */
   route: number;
 }
 
@@ -204,12 +218,20 @@ export interface NumberMessagingPatchData {
 export interface NumberMoveData {
   number: PhoneNumber;
   accountId: number;
+  /**
+   * Global route type: 1 USER, 2 T30, 3 VOICE_BRIDGE, 4 DID (default),
+   * 5 T38, 6 VOICEML, 8 SDN, 9 MOBILE. Route on the destination account after the move.
+   */
   route: number;
 }
 
 /** Response data for `PUT /v2.2/numbers/{number}/route`. */
 export interface NumberRouteData {
   number: PhoneNumber;
+  /**
+   * Global route type: 1 USER, 2 T30, 3 VOICE_BRIDGE, 4 DID (default),
+   * 5 T38, 6 VOICEML, 8 SDN, 9 MOBILE. Echo of the applied route.
+   */
   route: number;
 }
 
