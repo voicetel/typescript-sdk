@@ -6,9 +6,11 @@ export type ErrorKind =
   | "unknown"
   | "bad_request"
   | "authentication"
+  | "payment_required"
   | "permission_denied"
   | "not_found"
   | "conflict"
+  | "payload_too_large"
   | "rate_limit"
   | "server";
 
@@ -69,9 +71,11 @@ export const isConflict = (err: unknown): err is ApiError =>
 export function kindFromStatus(status: number): ErrorKind {
   if (status === 400) return "bad_request";
   if (status === 401) return "authentication";
+  if (status === 402) return "payment_required";
   if (status === 403) return "permission_denied";
   if (status === 404) return "not_found";
   if (status === 409) return "conflict";
+  if (status === 413) return "payload_too_large";
   if (status === 429) return "rate_limit";
   if (status >= 500 && status < 600) return "server";
   return "unknown";

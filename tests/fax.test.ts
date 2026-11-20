@@ -156,10 +156,34 @@ describe("FaxService", () => {
         documents: [{ name: "contract.pdf", data: "%PDF-1.7 x" }],
       }),
     ).rejects.toMatchObject({
-      kind: "unknown",
+      kind: "payment_required",
       statusCode: 402,
       code: 402,
       message: "Your account needs a positive balance to send faxes.",
+    });
+  });
+
+  it("send() maps the 413 documents-over-8-MiB error", async () => {
+    const { client } = buildMockClient({
+      "POST /v2.2/faxes": () => ({
+        status: 413,
+        body: JSON.stringify({
+          status: "error",
+          error: { code: 413, message: "Documents exceed the 8 MiB limit." },
+        }),
+      }),
+    });
+    await expect(
+      client.fax.send({
+        fromNumber: "2015550123",
+        toNumber: "2125550123",
+        documents: [{ name: "contract.pdf", data: "%PDF-1.7 x" }],
+      }),
+    ).rejects.toMatchObject({
+      kind: "payload_too_large",
+      statusCode: 413,
+      code: 413,
+      message: "Documents exceed the 8 MiB limit.",
     });
   });
 

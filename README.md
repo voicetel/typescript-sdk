@@ -167,9 +167,11 @@ All HTTP errors throw `ApiError` with a typed `kind`:
 |---|---|
 | `"bad_request"` | 400 |
 | `"authentication"` | 401 |
+| `"payment_required"` | 402 |
 | `"permission_denied"` | 403 |
 | `"not_found"` | 404 |
 | `"conflict"` | 409 |
+| `"payload_too_large"` | 413 |
 | `"rate_limit"` | 429 |
 | `"server"` | 5xx |
 | `"unknown"` | other / transport |
