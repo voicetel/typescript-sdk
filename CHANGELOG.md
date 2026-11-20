@@ -13,6 +13,7 @@ Audit release (spec v2.2.21): new Fax API plus a **breaking** wire fix for `DELE
   - `document(id)` — the rendered PDF as a raw `Uint8Array` (binary response, not JSON); 404 when the job has no document.
 - Transport now supports **multipart form requests** (`formData`) and **raw-bytes success responses** (`responseKind: "bytes"`), plus per-request header overrides.
 - Fax error envelopes carry an extra `serverTime` field beside `status`/`error`; the error parser tolerates unknown fields.
+- Typed error kinds for HTTP 402 (`payment_required` — positive balance required: fax send, directory listing) and HTTP 413 (`payload_too_large` — upload over 8 MiB), both previously mapped to `unknown`.
 
 ### Breaking
 - `client.acl.remove()` now sends the required JSON body `{"acl":[{"cidr":"203.0.113.0/24"}, ...]}` — the same shape as `acl.add()` — instead of the old `cidrs` comma-joined query parameter, which the live handler no longer reads. Signature: `client.acl.remove({ acl: [{ cidr: "203.0.113.0/24" }] })`. A 409 still carries partial results (`{removed, failed}`) on `err.body`.
