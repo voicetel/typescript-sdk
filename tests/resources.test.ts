@@ -256,7 +256,18 @@ describe("LookupsService", () => {
         ok({ ani: "2015550100", destination: "2015550123", lrn: { lrn: "12125550000", state: "NY" } }),
     });
     expect((await client.lookups.cnam("2015550100")).cnam).toBe("VOICETEL");
-    expect((await client.lookups.lrn("2015550123", "2015550100")).lrn.lrn).toBe("12125550000");
+    expect((await client.lookups.lrn("2015550123", "2015550100")).lrn!.lrn).toBe("12125550000");
+  });
+
+  it("lrn dip with no record is 200 with lrn:null", async () => {
+    const { client } = buildMockClient({
+      "GET /v2.2/lrn/2015550123/2015550100": () =>
+        ok({ ani: "2015550100", destination: "2015550123", lrn: null }),
+    });
+    const out = await client.lookups.lrn("2015550123", "2015550100");
+    expect(out.lrn).toBeNull();
+    expect(out.ani).toBe("2015550100");
+    expect(out.destination).toBe("2015550123");
   });
 
   it("carrier lookup keeps the upstream snake_case field names", async () => {

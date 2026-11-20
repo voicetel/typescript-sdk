@@ -53,5 +53,6 @@ export interface LrnData {
 export interface LrnLookupData {
   ani: PhoneNumber;
   destination: PhoneNumber;
-  lrn: LrnData;
+  /** Null when the dip found no record (still 200, still billed). */
+  lrn: LrnData | null;
 }
