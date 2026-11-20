@@ -23,8 +23,20 @@ export interface RequestSpec {
   path: string;
   query?: Record<string, string | number | undefined>;
   body?: unknown;
+  /**
+   * Multipart form body (e.g. fax documents). Takes precedence over `body`;
+   * the `Content-Type` (with boundary) is supplied by fetch itself.
+   */
+  formData?: FormData;
   requireAuth?: boolean;
   signal?: AbortSignal;
+  /** Extra headers for this request (e.g. a caller-chosen `Idempotency-Key`). */
+  headers?: Record<string, string>;
+  /**
+   * `"bytes"` returns the raw 2xx body as a `Uint8Array` instead of decoding
+   * the JSON envelope — for binary downloads such as `GET /v2.2/faxes/{id}/document`.
+   */
+  responseKind?: "json" | "bytes";
 }
 
 const RETRYABLE = new Set([429, 500, 502, 503, 504]);
@@ -101,7 +113,7 @@ export class Transport {
     }
 
     const headers: Record<string, string> = {
-      Accept: "application/json",
+      Accept: spec.responseKind === "bytes" ? "*/*" : "application/json",
       "Accept-Encoding": "gzip",
       "User-Agent": this.userAgent,
     };
@@ -109,8 +121,13 @@ export class Transport {
     if (["POST", "PUT", "PATCH"].includes(spec.method)) {
       headers["Idempotency-Key"] = globalThis.crypto.randomUUID();
     }
-    let bodyText: string | undefined;
-    if (spec.body !== undefined) {
+    if (spec.headers) {
+      for (const [k, v] of Object.entries(spec.headers)) headers[k] = v;
+    }
+    let bodyText: string | FormData | undefined;
+    if (spec.formData !== undefined) {
+      bodyText = spec.formData;
+    } else if (spec.body !== undefined) {
       bodyText = JSON.stringify(spec.body);
       headers["Content-Type"] = "application/json";
     }
@@ -158,7 +175,7 @@ export class Transport {
         await sleep(delay, spec.signal);
         continue;
       }
-      return decode<T>(response);
+      return decode<T>(response, spec.responseKind === "bytes");
     }
 
     // Defensive — the loop above always returns or throws.
@@ -167,7 +184,12 @@ export class Transport {
 }
 
 /** @internal */
-async function decode<T>(response: Response): Promise<T> {
+async function decode<T>(response: Response, rawBytes = false): Promise<T> {
+  // Binary download (e.g. the fax PDF): hand back the raw 2xx bytes untouched.
+  if (rawBytes && response.status >= 200 && response.status < 300) {
+    return new Uint8Array(await response.arrayBuffer()) as T;
+  }
+
   const text = await response.text();
 
   if (response.status >= 200 && response.status < 300) {

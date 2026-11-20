@@ -13,13 +13,12 @@ export class AclService {
     return this.t.request<AclAddData>({ method: "POST", path: "/v2.2/acl", body, ...opts });
   }
 
-  /** Remove the given CIDR blocks (sent as a comma-separated `cidrs` query parameter). */
-  remove(cidrs: string[], opts?: { signal?: AbortSignal }): Promise<AclRemoveData> {
-    return this.t.request<AclRemoveData>({
-      method: "DELETE",
-      path: "/v2.2/acl",
-      query: { cidrs: cidrs.join(",") },
-      ...opts,
-    });
+  /**
+   * Remove the given ACL entries — `DELETE /v2.2/acl` with the same
+   * `{acl: [{cidr}]}` JSON body as {@link AclService.add}. Entries that do not
+   * exist fail individually (409, partial results on `err.body`).
+   */
+  remove(body: AclModifyRequest, opts?: { signal?: AbortSignal }): Promise<AclRemoveData> {
+    return this.t.request<AclRemoveData>({ method: "DELETE", path: "/v2.2/acl", body, ...opts });
   }
 }

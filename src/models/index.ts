@@ -3,6 +3,7 @@ export * from "./acl.js";
 export * from "./authentication.js";
 export * from "./common.js";
 export * from "./e911.js";
+export * from "./fax.js";
 export * from "./gateways.js";
 export * from "./inumbering.js";
 export * from "./lookups.js";

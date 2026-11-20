@@ -77,6 +77,9 @@ export function buildMockClient(
       } catch {
         body = init.body;
       }
+    } else if (init?.body !== undefined) {
+      // Non-JSON body — e.g. the FormData of a multipart request.
+      body = init.body;
     }
     const req: Captured = { url: url.toString(), method: init?.method ?? "GET", headers, body };
     captured.push(req);

@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
+import { ApiError } from "../src/index.js";
 import {
+  type AclConflictData,
   type AclModifyRequest,
   type DirectoryListingRequest,
   type MessageSendRequest,
@@ -86,18 +88,51 @@ describe("AclService", () => {
       "GET /v2.2/acl": () => ok({ acl: [{ cidr: "203.0.113.0/24" }] }),
       "POST /v2.2/acl": () => ok({ added: [{ cidr: "203.0.113.0/24" }] }),
       "DELETE /v2.2/acl": (req) => {
-        // No body — the CIDRs go out as a comma-separated query parameter.
-        expect(req.body).toBeUndefined();
-        expect(new URL(req.url).searchParams.get("cidrs")).toBe("203.0.113.0/24,203.0.113.9/32");
+        // v2.2.21: DELETE takes the same {acl:[{cidr}]} JSON body as POST —
+        // the old `cidrs` query parameter is no longer read by the server.
+        expect(req.body).toEqual({
+          acl: [{ cidr: "203.0.113.0/24" }, { cidr: "203.0.113.9/32" }],
+        });
+        expect(new URL(req.url).search).toBe("");
         return ok({ removed: [{ cidr: "203.0.113.0/24" }] });
       },
     });
     const body: AclModifyRequest = { acl: [{ cidr: "203.0.113.0/24" }] };
     expect((await client.acl.list()).acl[0]!.cidr).toBe("203.0.113.0/24");
     expect((await client.acl.add(body)).added[0]!.cidr).toBe("203.0.113.0/24");
-    expect((await client.acl.remove(["203.0.113.0/24", "203.0.113.9/32"])).removed[0]!.cidr).toBe(
-      "203.0.113.0/24",
-    );
+    expect(
+      (await client.acl.remove({ acl: [{ cidr: "203.0.113.0/24" }, { cidr: "203.0.113.9/32" }] }))
+        .removed[0]!.cidr,
+    ).toBe("203.0.113.0/24");
+  });
+
+  it("remove: 409 carries removed/failed partial results on err.body", async () => {
+    const { client } = buildMockClient({
+      "DELETE /v2.2/acl": () => ({
+        status: 409,
+        body: JSON.stringify({
+          status: "error",
+          error: { code: 409, message: "One or more ACL entries could not be removed" },
+          data: {
+            removed: [{ cidr: "203.0.113.0/24" }],
+            failed: [{ cidr: "203.0.113.9/32", reason: "DB delete failed" }],
+          },
+        }),
+      }),
+    });
+    try {
+      await client.acl.remove({ acl: [{ cidr: "203.0.113.0/24" }] });
+      expect.fail("should have thrown");
+    } catch (err) {
+      expect(err).toBeInstanceOf(ApiError);
+      const apiErr = err as ApiError;
+      expect(apiErr.kind).toBe("conflict");
+      expect(apiErr.statusCode).toBe(409);
+      // err.body is the full envelope; the partial results live in its `data`.
+      const conflict = (apiErr.body as { data: AclConflictData }).data;
+      expect(conflict.failed?.[0]?.reason).toBe("DB delete failed");
+      expect(conflict.removed?.[0]?.cidr).toBe("203.0.113.0/24");
+    }
   });
 });
 

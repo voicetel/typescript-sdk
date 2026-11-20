@@ -4,6 +4,7 @@ import { AccountService } from "./resources/account.js";
 import { AclService } from "./resources/acl.js";
 import { AuthenticationService } from "./resources/authentication.js";
 import { E911Service } from "./resources/e911.js";
+import { FaxService } from "./resources/fax.js";
 import { GatewaysService } from "./resources/gateways.js";
 import { INumberingService } from "./resources/inumbering.js";
 import { LookupsService } from "./resources/lookups.js";
@@ -28,6 +29,7 @@ export class VoiceTelClient {
   readonly acl: AclService;
   readonly authentication: AuthenticationService;
   readonly e911: E911Service;
+  readonly fax: FaxService;
   readonly gateways: GatewaysService;
   readonly iNumbering: INumberingService;
   readonly lookups: LookupsService;
@@ -41,6 +43,7 @@ export class VoiceTelClient {
     this.acl = new AclService(this.transport);
     this.authentication = new AuthenticationService(this.transport);
     this.e911 = new E911Service(this.transport);
+    this.fax = new FaxService(this.transport);
     this.gateways = new GatewaysService(this.transport);
     this.iNumbering = new INumberingService(this.transport);
     this.lookups = new LookupsService(this.transport);

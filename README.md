@@ -2,7 +2,7 @@
 
 The official TypeScript / JavaScript client for the [VoiceTel REST API](https://voicetel.com/docs/api/v2.2/) — provision numbers, place orders, validate e911, send messages, and manage your account, with end-to-end TypeScript types and zero external dependencies.
 
-![Version](https://img.shields.io/badge/version-2.2.20-blue)
+![Version](https://img.shields.io/badge/version-2.2.21-blue)
 ![Node](https://img.shields.io/badge/node-%E2%89%A520-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Coverage](https://img.shields.io/badge/coverage-90%25-brightgreen)
@@ -28,7 +28,7 @@ The official TypeScript / JavaScript client for the [VoiceTel REST API](https://
 ## ✨ Features
 
 ### 🛡️ Strongly Typed End-to-End
-- **TypeScript interfaces** for every one of the 83 API operations — request bodies, response payloads, and entity types.
+- **TypeScript interfaces** for every one of the 88 API operations — request bodies, response payloads, and entity types.
 - **Strict mode-friendly.** Authored against `strict`, `noUncheckedIndexedAccess`, and `exactOptionalPropertyTypes` style rules.
 - **Autocomplete everywhere.** Your IDE knows the shape of every field — no more guessing what's in `result.data.numbers`.
 
@@ -48,6 +48,7 @@ The official TypeScript / JavaScript client for the [VoiceTel REST API](https://
 - **Numbers** — list, get, add, remove, route, translate, CNAM, LIDB, directory listing (411), fax, forward, SMS, messaging campaigns, port-out PIN, account moves.
 - **Account** — profile, sub-accounts, CDRs, credits, payments, MRC, registration, password recovery.
 - **e911** — record provisioning, address validation, lookup, removal.
+- **Fax** — send faxes (multipart upload, idempotent per `Idempotency-Key`), poll job status, cursor-paged history, and PDF document download as raw bytes.
 - **Gateways** — list, create, update, delete, view bound numbers.
 - **Messaging** — SMS & MMS sending, message history, 10DLC brand and campaign registration, per-number messaging state, and messaging health (account overview, per-number live check, spam-blocked samples, alert-email setting).
 - **Lookups** — CNAM, carrier & line type, and LRN dips.
@@ -57,7 +58,7 @@ The official TypeScript / JavaScript client for the [VoiceTel REST API](https://
 - **Authentication** — switch between Digest, IP-only, or hybrid modes; rotate passwords.
 
 ### 🧪 Battle-Tested
-- **56 tests** at **90% statement coverage** with `vitest`.
+- **61 tests** at **90% statement coverage** with `vitest`.
 - **Mocked fetch** + every method and error path covered.
 - **Strict TypeScript** with `tsc --noEmit` enforced in CI.
 
@@ -131,6 +132,7 @@ const key = await client.login("1000000001", "hunter2");
 | ACL | `client.acl` | `client.acl.add({ acl: [{ cidr: "..." }] })` |
 | Authentication | `client.authentication` | `client.authentication.update({ authType: 1 })` |
 | e911 | `client.e911` | `client.e911.validate({ address1, ... })` |
+| Fax | `client.fax` | `client.fax.send({ fromNumber, toNumber, documents })` |
 | Gateways | `client.gateways` | `client.gateways.list()` |
 | iNumbering | `client.iNumbering` | `client.iNumbering.searchInventory({ tnMask: "201555*" })` |
 | Lookups | `client.lookups` | `client.lookups.carrier("2015550123")` |
@@ -199,8 +201,8 @@ try {
   await client.acl.add({ acl: [{ cidr: "abc" }] });
 } catch (err) {
   if (isConflict(err)) {
-    const body = err.body as AclConflictData;
-    console.log("Failed CIDRs:", body.failed);
+    const { data } = err.body as { data: AclConflictData };
+    console.log("Failed CIDRs:", data.failed);
   }
 }
 ```
@@ -232,6 +234,8 @@ These endpoints are limited to **6 requests per hour per IP**:
 - `account/recurring-charges` (`client.account.recurringCharges()`)
 - `account/cdr` (`client.account.cdr()`)
 - `account/api-key` (`client.login()`)
+
+`POST /v2.2/faxes` (`client.fax.send()`) is limited to **10 sends per minute per account** (`Retry-After: 60`), and `POST /v2.2/messaging/health/check` to **30 checks per hour per account**.
 
 The SDK automatically retries 429 responses with `Retry-After` honored, up to `maxRetries` (default 2). To bump it:
 

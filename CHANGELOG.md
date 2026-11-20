@@ -1,5 +1,22 @@
 # Changelog
 
+## 2.2.21 — 2026-11-20
+
+Audit release (spec v2.2.21): new Fax API plus a **breaking** wire fix for `DELETE /v2.2/acl`.
+
+### Added
+- **Fax** resource — `client.fax`:
+  - `numbers()` — every fax-capable number on the account with the email each delivers to (`destinationId` 0 = the account email).
+  - `send({ fromNumber, toNumber, documents, idempotencyKey? })` — `POST /v2.2/faxes` as **multipart/form-data** (1–10 documents, PDF/DOC/DOCX checked by magic bytes, 8 MiB each and in total). The required `Idempotency-Key` header is a client-generated UUID — taken from `idempotencyKey` or generated with `crypto.randomUUID()`; resubmitting the same documents with the same key returns the original job instead of sending twice. Rate-limited to 10 sends per minute per account (`Retry-After: 60`). Errors: 400 invalid form/field/type, 402 needs a positive balance, 403 not your fax number / account disabled, 409 linked fax email unusable, 413 too large, 502/503 processor.
+  - `history({ number, from?, to?, limit?, cursor?, status? })` — jobs for one of your fax numbers, newest first, cursor-paged. `number` is required; `from`/`to` are unix seconds (`from` = newer edge, defaults to the last 24 hours); `limit` 1–100 (default 50); `status` in `all|active|queued|sending|retry_pending|sent|failed`.
+  - `get(id)` — one job: status, ISO-8601 timestamps, attempts, failure reason, documents.
+  - `document(id)` — the rendered PDF as a raw `Uint8Array` (binary response, not JSON); 404 when the job has no document.
+- Transport now supports **multipart form requests** (`formData`) and **raw-bytes success responses** (`responseKind: "bytes"`), plus per-request header overrides.
+- Fax error envelopes carry an extra `serverTime` field beside `status`/`error`; the error parser tolerates unknown fields.
+
+### Breaking
+- `client.acl.remove()` now sends the required JSON body `{"acl":[{"cidr":"203.0.113.0/24"}, ...]}` — the same shape as `acl.add()` — instead of the old `cidrs` comma-joined query parameter, which the live handler no longer reads. Signature: `client.acl.remove({ acl: [{ cidr: "203.0.113.0/24" }] })`. A 409 still carries partial results (`{removed, failed}`) on `err.body`.
+
 ## 2.2.20 — 2026-11-20
 
 Spec v2.2.20 sync. Adds the four new operations and tracks the truth fixes from spec v2.2.18–v2.2.20.
