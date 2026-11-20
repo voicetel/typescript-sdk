@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   type AclModifyRequest,
+  type DirectoryListingRequest,
   type MessageSendRequest,
   type NumberAddRequest,
   type NumberCampaignAssignRequest,
@@ -20,7 +21,7 @@ import {
   type TicketReplyRequest,
   type TicketUpdateRequest,
 } from "../src/index.js";
-import { buildMockClient, created, noContent, ok } from "./helpers.js";
+import { accepted, buildMockClient, created, noContent, ok } from "./helpers.js";
 
 // ----------------------------------------------------------------- Account ---
 
@@ -118,6 +119,7 @@ describe("AuthenticationService", () => {
 
 describe("E911Service", () => {
   it("walks the full surface", async () => {
+    const hexAddressId = "123a45b678c9d012e3f45a67b890c123";
     const record = {
       dn: "12015550123",
       callername: "ACME",
@@ -130,9 +132,13 @@ describe("E911Service", () => {
       "GET /v2.2/e911": () => ok({ records: [record] }),
       "POST /v2.2/e911": () => created({ record }),
       "POST /v2.2/e911/validations": () =>
-        ok({ address: { addressid: 1, address1: "1 Main", city: "Closter", state: "NJ", zip: "07624" } }),
+        ok({ address: { addressid: hexAddressId, address1: "1 Main", city: "Closter", state: "NJ", zip: "07624" } }),
       "GET /v2.2/e911/2015550123": () => ok({ record }),
-      "PUT /v2.2/e911/2015550123": () => ok({ record }),
+      "PUT /v2.2/e911/2015550123": (req) => {
+        // v2.2.20: addressid is a hex STRING and round-trips unchanged.
+        expect(req.body).toEqual({ callername: "ACME", addressid: hexAddressId });
+        return ok({ record });
+      },
       "DELETE /v2.2/e911/2015550123": () => noContent,
     });
 
@@ -149,20 +155,20 @@ describe("E911Service", () => {
         })
       ).record.callername,
     ).toBe("ACME");
-    expect(
-      (
-        await client.e911.validate({
-          address1: "1 Main",
-          city: "Closter",
-          state: "NJ",
-          zip: "07624",
-        })
-      ).address.addressid,
-    ).toBe(1);
+    const validated = await client.e911.validate({
+      address1: "1 Main",
+      city: "Closter",
+      state: "NJ",
+      zip: "07624",
+    });
+    expect(validated.address.addressid).toBe(hexAddressId);
     expect((await client.e911.get("2015550123")).record.dn).toBe("12015550123");
     expect(
       (
-        await client.e911.provision("2015550123", { callername: "ACME", addressid: 1 })
+        await client.e911.provision("2015550123", {
+          callername: "ACME",
+          addressid: validated.address.addressid,
+        })
       ).record.dn,
     ).toBe("12015550123");
     await expect(client.e911.remove("2015550123")).resolves.toBeUndefined();
@@ -217,6 +223,50 @@ describe("LookupsService", () => {
     expect((await client.lookups.cnam("2015550100")).cnam).toBe("VOICETEL");
     expect((await client.lookups.lrn("2015550123", "2015550100")).lrn.lrn).toBe("12125550000");
   });
+
+  it("carrier lookup keeps the upstream snake_case field names", async () => {
+    const { client, captured } = buildMockClient({
+      "GET /v2.2/carrier/2015550123": () =>
+        ok({
+          number: "2015550123",
+          carrier: {
+            name: "EXAMPLE CARRIER",
+            type: "voip",
+            mobile_country_code: null,
+            mobile_network_code: null,
+            error_code: null,
+          },
+        }),
+    });
+    const data = await client.lookups.carrier("2015550123");
+    expect(captured[0]!.url).toBe("https://api.voicetel.test/v2.2/carrier/2015550123");
+    expect(data.number).toBe("2015550123");
+    expect(data.carrier.name).toBe("EXAMPLE CARRIER");
+    expect(data.carrier.type).toBe("voip");
+    // Wire names are the upstream carrier's — NOT renamed by the SDK.
+    expect(data.carrier.mobile_country_code).toBeNull();
+    expect(data.carrier.mobile_network_code).toBeNull();
+    expect(data.carrier.error_code).toBeNull();
+  });
+
+  it("carrier lookup on a mobile number", async () => {
+    const { client } = buildMockClient({
+      "GET /v2.2/carrier/2015550199": () =>
+        ok({
+          number: "2015550199",
+          carrier: {
+            name: "EXAMPLE MOBILE",
+            type: "mobile",
+            mobile_country_code: "310",
+            mobile_network_code: "456",
+            error_code: null,
+          },
+        }),
+    });
+    const { carrier } = await client.lookups.carrier("2015550199");
+    expect(carrier.mobile_country_code).toBe("310");
+    expect(carrier.mobile_network_code).toBe("456");
+  });
 });
 
 // -------------------------------------------------------------------- Messaging ---
@@ -230,7 +280,25 @@ describe("MessagingService", () => {
         expect(q.get("from")).toBe("2");
         expect(q.get("to")).toBe("1");
         expect(q.get("type")).toBe("sms");
-        return ok({ number: "2015550100", type: "sms", fromTs: 2, toTs: 1, messages: [] });
+        return ok({
+          number: "2015550100",
+          type: "sms",
+          fromTs: 2,
+          toTs: 1,
+          messages: [
+            {
+              id: "r1",
+              key: ["12015550100", 1747345100],
+              value: {
+                direction: "out",
+                number: "12015550123",
+                message: "hi",
+                rate: "0.0150",
+                ip: "203.0.113.10",
+              },
+            },
+          ],
+        });
       },
       "POST /v2.2/messages": () =>
         created({
@@ -282,9 +350,10 @@ describe("MessagingService", () => {
       toNumber: "2015550123",
       text: "hi",
     };
-    expect(
-      (await client.messaging.history({ number: "2015550100", from: 2, to: 1, type: "sms" })).type,
-    ).toBe("sms");
+    const history = await client.messaging.history({ number: "2015550100", from: 2, to: 1, type: "sms" });
+    expect(history.type).toBe("sms");
+    // v2.2.20 field: ip on outbound sms records.
+    expect(history.messages[0]!.value.ip).toBe("203.0.113.10");
     expect((await client.messaging.send(send)).id).toBe("x");
     expect(
       (
@@ -337,6 +406,119 @@ describe("MessagingService", () => {
     const samples = await client.messaging.healthSamples("2125550123");
     expect(Array.isArray(samples)).toBe(true);
     expect(samples[0]).toEqual({ time: "2026-10-13T09:30:00Z", text: "hi", reason: "spam" });
+  });
+
+  it("sends a media-only MMS (text is optional since v2.2.20)", async () => {
+    const { client } = buildMockClient({
+      "POST /v2.2/messages": (req) => {
+        // No `text` on the wire — media-only MMS.
+        expect(req.body).toEqual({
+          fromNumber: "2015550100",
+          toNumber: "2015550123",
+          mediaUrls: ["https://cdn.example.test/photo.jpg"],
+        });
+        return created({
+          id: "mms-1",
+          type: "mms",
+          fromNumber: "2015550100",
+          toNumber: "2015550123",
+          parts: 1,
+          mediaUrls: ["https://cdn.example.test/photo.jpg"],
+        });
+      },
+    });
+    const send: MessageSendRequest = {
+      fromNumber: "2015550100",
+      toNumber: "2015550123",
+      mediaUrls: ["https://cdn.example.test/photo.jpg"],
+    };
+    const sent = await client.messaging.send(send);
+    expect(sent.type).toBe("mms");
+    expect(sent.mediaUrls).toEqual(["https://cdn.example.test/photo.jpg"]);
+  });
+
+  it("message history carries the v2.2.20 dlr / mms field set", async () => {
+    const { client } = buildMockClient({
+      "GET /v2.2/messages": (req) => {
+        expect(new URL(req.url).searchParams.get("type")).toBe("dlr");
+        return ok({
+          number: "2015550100",
+          type: "dlr",
+          fromTs: 2,
+          toTs: 1,
+          messages: [
+            {
+              id: "d1",
+              key: ["1", "12015550100", 1747345100],
+              value: {
+                sourceNumber: "12015550100",
+                destinationNumber: "12015550123",
+                messageText:
+                  "id:1793144711856jfw sub:001 dlvrd:001 stat:DELIVRD err:000 text:delivered",
+                transactionGUID: "1793144711856jfw",
+                concatenatedMessage: "2",
+              },
+            },
+          ],
+        });
+      },
+    });
+    const dlr = await client.messaging.history({ number: "2015550100", from: 2, to: 1, type: "dlr" });
+    expect(dlr.messages[0]!.value.transactionGUID).toBe("1793144711856jfw");
+    expect(dlr.messages[0]!.value.messageText).toContain("stat:DELIVRD");
+    expect(dlr.messages[0]!.value.concatenatedMessage).toBe("2");
+  });
+
+  it("message history exposes mms attachments and subject", async () => {
+    const { client } = buildMockClient({
+      "GET /v2.2/messages": () =>
+        ok({
+          number: "2015550100",
+          type: "mms",
+          fromTs: 2,
+          toTs: 1,
+          messages: [
+            {
+              id: "m1",
+              key: ["1", "2015550100", 1747345100],
+              value: {
+                direction: "in",
+                number: "2015550123",
+                attachments: [
+                  {
+                    contentFile: "https://files.example.test/mms/abc.jpg",
+                    "Content-Type": "image/jpeg",
+                    fileName: "abc.jpg",
+                    extension: "jpg",
+                  },
+                ],
+                subject: "Photo",
+              },
+            },
+            {
+              id: "m2",
+              key: ["1", "2015550100", 1747345110],
+              value: {
+                direction: "out",
+                number: "2015550123",
+                attachments: "https://cdn.example.test/photo.jpg",
+              },
+            },
+          ],
+        }),
+    });
+    const mms = await client.messaging.history({ number: "2015550100", type: "mms" });
+    expect(mms.messages[0]!.value.subject).toBe("Photo");
+    expect(mms.messages[0]!.value.attachments).toEqual([
+      {
+        contentFile: "https://files.example.test/mms/abc.jpg",
+        "Content-Type": "image/jpeg",
+        fileName: "abc.jpg",
+        extension: "jpg",
+      },
+    ]);
+    // Outbound attachments are the submitted media URL(s) — string or array.
+    expect(mms.messages[1]!.value.attachments).toBe("https://cdn.example.test/photo.jpg");
   });
 });
 
@@ -434,6 +616,49 @@ describe("NumbersService", () => {
       },
       "PATCH /v2.2/numbers/2015550123/port-out-pin": () =>
         ok({ number: "2015550123", portOutPin: "1234" }),
+      "GET /v2.2/numbers/2015550123/directory-listing": () =>
+        ok({
+          number: "2015550123",
+          status: "listed",
+          eligible: true,
+          listing: {
+            type: "B",
+            name: "Acme Corp",
+            streetNumber: "100",
+            streetName: "Broadway",
+            streetType: "St",
+            streetSuffix: "",
+            location: "Suite 900",
+            city: "New York",
+            state: "NY",
+            zip: "10005",
+            complex: false,
+          },
+          pending: null,
+        }),
+      "PUT /v2.2/numbers/2015550123/directory-listing": (req) => {
+        expect(req.body).toEqual({
+          type: "business",
+          name: "Acme Corp",
+          city: "New York",
+          state: "NY",
+          zip: "10005",
+        });
+        return accepted({
+          number: "2015550123",
+          status: "pending",
+          orderId: "1026472",
+          listing: {
+            type: "B",
+            name: "Acme Corp",
+            city: "New York",
+            state: "NY",
+            zip: "10005",
+          },
+        });
+      },
+      "DELETE /v2.2/numbers/2015550123/directory-listing": () =>
+        accepted({ number: "2015550123", status: "removing", orderId: "1026473" }),
     });
 
     expect((await client.numbers.list()).numbers[0]!.route).toBe(4);
@@ -477,6 +702,78 @@ describe("NumbersService", () => {
     ).toEqual(["2015550123", "2015551235"]);
     const pin: PortOutPinUpdateRequest = { pin: "1234" };
     expect((await client.numbers.setPortOutPin("2015550123", pin)).portOutPin).toBe("1234");
+    // Directory listing (v2.2.20) — GET published state, PUT/DELETE accepted (202).
+    const listed = await client.numbers.getDirectoryListing("2015550123");
+    expect(listed.status).toBe("listed");
+    expect(listed.eligible).toBe(true);
+    expect(listed.listing?.name).toBe("Acme Corp");
+    expect(listed.pending).toBeNull();
+    const listing: DirectoryListingRequest = {
+      type: "business",
+      name: "Acme Corp",
+      city: "New York",
+      state: "NY",
+      zip: "10005",
+    };
+    const put = await client.numbers.setDirectoryListing("2015550123", listing);
+    expect(put.status).toBe("pending");
+    expect(put.orderId).toBe("1026472");
+    const removed = await client.numbers.removeDirectoryListing("2015550123");
+    expect(removed.status).toBe("removing");
+    expect(removed.orderId).toBe("1026473");
+  });
+
+  it("directory listing: residence listing and cancel of a pending add", async () => {
+    const { client } = buildMockClient({
+      "PUT /v2.2/numbers/2015550199/directory-listing": (req) => {
+        expect(req.body).toEqual({
+          type: "residence",
+          firstName: "Jane",
+          lastName: "Doe",
+          city: "New York",
+          state: "NY",
+          zip: "10005",
+        });
+        return accepted({
+          number: "2015550199",
+          status: "pending",
+          orderId: null,
+          listing: { type: "R", firstName: "Jane", lastName: "Doe", city: "New York", state: "NY", zip: "10005" },
+        });
+      },
+      "DELETE /v2.2/numbers/2015550199/directory-listing": () =>
+        // Cancel of a pending add: not_listed, no orderId.
+        accepted({ number: "2015550199", status: "not_listed" }),
+    });
+    const residence: DirectoryListingRequest = {
+      type: "residence",
+      firstName: "Jane",
+      lastName: "Doe",
+      city: "New York",
+      state: "NY",
+      zip: "10005",
+    };
+    const put = await client.numbers.setDirectoryListing("2015550199", residence);
+    expect(put.status).toBe("pending");
+    expect(put.listing?.type).toBe("R");
+    const cancel = await client.numbers.removeDirectoryListing("2015550199");
+    expect(cancel.status).toBe("not_listed");
+    expect("orderId" in cancel).toBe(false);
+  });
+
+  it("accepts gateway ids as routes (v2.2.20: routes are no longer limited to the global 1–9 enum)", async () => {
+    const { client } = buildMockClient({
+      "PUT /v2.2/numbers/2015550123/route": (req) => {
+        expect(req.body).toEqual({ route: 1000 });
+        return ok({ number: "2015550123", route: 1000 });
+      },
+      "PATCH /v2.2/numbers/2015550123": (req) => {
+        expect(req.body).toEqual({ accountId: 99, route: 1000 });
+        return ok({ number: "2015550123", accountId: 99, route: 1000 });
+      },
+    });
+    expect((await client.numbers.setRoute("2015550123", { route: 1000 })).route).toBe(1000);
+    expect((await client.numbers.move("2015550123", { accountId: 99, route: 1000 })).route).toBe(1000);
   });
 });
 
@@ -537,13 +834,17 @@ describe("INumberingService", () => {
         expect(q.get("locState")).toBe("NJ");
         return ok({ coverage: [{ count: 100, npa: "201" }] });
       },
-      "POST /v2.2/orders": () =>
-        created({
+      "POST /v2.2/orders": (req) => {
+        // Per-number route override — a gateway id is valid since v2.2.20.
+        expect(req.body).toEqual({ numbers: [{ number: "2015550123", route: 1000 }] });
+        return created({
           orderId: "1",
           amountCharged: 0.5,
           numbersOrdered: ["2015550123"],
+          routes: [{ number: "2015550123", route: 1000 }],
           failed: [],
-        }),
+        });
+      },
       "GET /v2.2/ports": () => ok({ ports: [{ id: "abc", status: "Complete" }] }),
       "GET /v2.2/ports/a3a2a": () => ok({ port: { id: "abc", status: "Complete" } }),
       "POST /v2.2/ports": () =>
@@ -570,8 +871,11 @@ describe("INumberingService", () => {
         .numbers[0]!.number,
     ).toBe("2015550103");
     expect((await client.iNumbering.coverage({ countBy: "npanxx", locState: "NJ" })).coverage[0]!.count).toBe(100);
-    const order: OrderCreateRequest = { numbers: ["2015550123"] };
-    expect((await client.iNumbering.order(order)).orderId).toBe("1");
+    const order: OrderCreateRequest = { numbers: [{ number: "2015550123", route: 1000 }] };
+    const placed = await client.iNumbering.order(order);
+    expect(placed.orderId).toBe("1");
+    // v2.2.20: the order response reports the route each number was placed on.
+    expect(placed.routes).toEqual([{ number: "2015550123", route: 1000 }]);
     expect((await client.iNumbering.ports()).ports[0]!.id).toBe("abc");
     expect((await client.iNumbering.port("a3a2a")).port.id).toBe("abc");
     const port: PortSubmitRequest = {

@@ -2,10 +2,10 @@
 
 The official TypeScript / JavaScript client for the [VoiceTel REST API](https://voicetel.com/docs/api/v2.2/) — provision numbers, place orders, validate e911, send messages, and manage your account, with end-to-end TypeScript types and zero external dependencies.
 
-![Version](https://img.shields.io/badge/version-2.2.17-blue)
+![Version](https://img.shields.io/badge/version-2.2.20-blue)
 ![Node](https://img.shields.io/badge/node-%E2%89%A520-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
-![Coverage](https://img.shields.io/badge/coverage-96%25-brightgreen)
+![Coverage](https://img.shields.io/badge/coverage-90%25-brightgreen)
 ![Typed](https://img.shields.io/badge/typed-strict-blue)
 
 ## 📚 Table of Contents
@@ -28,7 +28,7 @@ The official TypeScript / JavaScript client for the [VoiceTel REST API](https://
 ## ✨ Features
 
 ### 🛡️ Strongly Typed End-to-End
-- **TypeScript interfaces** for every one of the 79 API operations — request bodies, response payloads, and entity types.
+- **TypeScript interfaces** for every one of the 83 API operations — request bodies, response payloads, and entity types.
 - **Strict mode-friendly.** Authored against `strict`, `noUncheckedIndexedAccess`, and `exactOptionalPropertyTypes` style rules.
 - **Autocomplete everywhere.** Your IDE knows the shape of every field — no more guessing what's in `result.data.numbers`.
 
@@ -45,19 +45,19 @@ The official TypeScript / JavaScript client for the [VoiceTel REST API](https://
 - **Structured `ApiError`** with typed `kind` so you can `switch err.kind { case "rate_limit": ... }` without parsing HTTP status codes.
 
 ### 📞 Complete API Coverage
-- **Numbers** — list, get, add, remove, route, translate, CNAM, LIDB, fax, forward, SMS, messaging campaigns, port-out PIN, account moves.
+- **Numbers** — list, get, add, remove, route, translate, CNAM, LIDB, directory listing (411), fax, forward, SMS, messaging campaigns, port-out PIN, account moves.
 - **Account** — profile, sub-accounts, CDRs, credits, payments, MRC, registration, password recovery.
 - **e911** — record provisioning, address validation, lookup, removal.
 - **Gateways** — list, create, update, delete, view bound numbers.
 - **Messaging** — SMS & MMS sending, message history, 10DLC brand and campaign registration, per-number messaging state, and messaging health (account overview, per-number live check, spam-blocked samples, alert-email setting).
-- **Lookups** — CNAM and LRN dips.
+- **Lookups** — CNAM, carrier & line type, and LRN dips.
 - **iNumbering** — inventory search, coverage queries, number orders, port-in submissions, port-out availability checks.
 - **Support** — ticket create / read / update / delete, threaded messages, replies.
 - **ACL** — IP allowlist management with structured 409 conflict bodies.
 - **Authentication** — switch between Digest, IP-only, or hybrid modes; rotate passwords.
 
 ### 🧪 Battle-Tested
-- **43 tests** at **96% statement coverage** with `vitest`.
+- **56 tests** at **90% statement coverage** with `vitest`.
 - **Mocked fetch** + every method and error path covered.
 - **Strict TypeScript** with `tsc --noEmit` enforced in CI.
 
@@ -133,7 +133,7 @@ const key = await client.login("1000000001", "hunter2");
 | e911 | `client.e911` | `client.e911.validate({ address1, ... })` |
 | Gateways | `client.gateways` | `client.gateways.list()` |
 | iNumbering | `client.iNumbering` | `client.iNumbering.searchInventory({ tnMask: "201555*" })` |
-| Lookups | `client.lookups` | `client.lookups.lrn("2015550123", "2015550100")` |
+| Lookups | `client.lookups` | `client.lookups.carrier("2015550123")` |
 | Messaging | `client.messaging` | `client.messaging.send({ fromNumber, toNumber, text })` |
 | Numbers | `client.numbers` | `client.numbers.assignCampaign("2015550123", { campaignId })` |
 | Support | `client.support` | `client.support.create({ subject, message })` |

@@ -26,8 +26,8 @@ export interface E911CreateRequest {
 /** Body for `PUT /v2.2/e911/{dn}`. */
 export interface E911ProvisionByIdRequest {
   callername: string;
-  /** From `POST /v2.2/e911/validations`. */
-  addressid: number;
+  /** Hex address ID from `POST /v2.2/e911/validations`. */
+  addressid: string;
 }
 
 /**
@@ -49,8 +49,8 @@ export interface E911Entry {
 
 /** Result from `POST /v2.2/e911/validations`. */
 export interface E911ValidatedAddress {
-  /** Upstream address ID. */
-  addressid: number;
+  /** Upstream address ID — a hex string; pass it to `PUT /v2.2/e911/{dn}` to provision. */
+  addressid: string;
   address1: string;
   address2?: string;
   city: string;

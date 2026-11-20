@@ -6,8 +6,9 @@ import type { PhoneNumber } from "./common.js";
 export interface NumberAddRequest {
   number: PhoneNumber;
   /**
-   * Global route type: 1 USER, 2 T30, 3 VOICE_BRIDGE, 4 DID (default),
-   * 5 T38, 6 VOICEML, 8 SDN, 9 MOBILE. Used when adding a number.
+   * Gateway id on this account (see `GET /v2.2/gateways`) or global route:
+   * 1 USER, 2 T30, 3 VOICE_BRIDGE, 4 DID (default), 5 T38, 6 VOICEML,
+   * 8 SDN, 9 MOBILE. Used when adding a number.
    */
   route?: number;
 }
@@ -15,8 +16,9 @@ export interface NumberAddRequest {
 /** Body for `PUT /v2.2/numbers/{number}/route`. */
 export interface NumberRouteRequest {
   /**
-   * Global route type: 1 USER, 2 T30, 3 VOICE_BRIDGE, 4 DID (default),
-   * 5 T38, 6 VOICEML, 8 SDN, 9 MOBILE. Set with `PUT /v2.2/numbers/{number}/route`.
+   * Gateway id on this account (see `GET /v2.2/gateways`) or global route:
+   * 1 USER, 2 T30, 3 VOICE_BRIDGE, 4 DID (default), 5 T38, 6 VOICEML,
+   * 8 SDN, 9 MOBILE. Set with `PUT /v2.2/numbers/{number}/route`.
    */
   route: number;
 }
@@ -82,6 +84,11 @@ export interface NumberCampaignAssignRequest {
 export interface NumberMoveRequest {
   /** Destination account id (numeric username). */
   accountId: number;
+  /**
+   * Gateway id on this account (see `GET /v2.2/gateways`) or global route:
+   * 1 USER, 2 T30, 3 VOICE_BRIDGE, 4 DID (default), 5 T38, 6 VOICEML,
+   * 8 SDN, 9 MOBILE. Route on the destination account after the move.
+   */
   route: number;
 }
 
@@ -89,6 +96,42 @@ export interface NumberMoveRequest {
 export interface PortOutPinUpdateRequest {
   /** 4-digit numeric. */
   pin: string;
+}
+
+/**
+ * Body for `PUT /v2.2/numbers/{number}/directory-listing` — add or replace
+ * the 411 listing.
+ *
+ * A business sets `name`; a residence sets `firstName` and `lastName`. The
+ * street is optional — give `streetNumber` and `streetName` together, or
+ * neither. `city`, `state` and `zip` are required. Letters, numbers, spaces
+ * and `& ' . , # / -` are allowed in the text fields.
+ */
+export interface DirectoryListingRequest {
+  /** `business` or `residence`; the shorthand `B` / `R` is also accepted by the server. */
+  type: "business" | "residence";
+  /** Business name; required for business (max 60). */
+  name?: string;
+  /** Resident's first name; required for residence (max 30). */
+  firstName?: string;
+  /** Resident's last name; required for residence (max 30). */
+  lastName?: string;
+  /** Up to 10 letters or digits; give it together with `streetName`, or neither. */
+  streetNumber?: string;
+  /** Street name (max 40); give it together with `streetNumber`, or neither. */
+  streetName?: string;
+  /** A word such as St, Ave or Rd (max 10, letters and `.` only). */
+  streetType?: string;
+  /** Street direction; requires a street name. */
+  streetSuffix?: "" | "N" | "S" | "E" | "W" | "NE" | "NW" | "SE" | "SW";
+  /** Suite or unit (max 30); requires a street name. */
+  location?: string;
+  /** City the listing is at (max 40). */
+  city: string;
+  /** Two-letter US state or territory code (57 codes incl. DC, PR, VI, GU, AS, MP). */
+  state: string;
+  /** 5-digit ZIP (a ZIP+4 is accepted and stored as the 5-digit ZIP). */
+  zip: string;
 }
 
 // ------------------------------------------------------- entities & responses ---
@@ -101,8 +144,9 @@ export interface NumberDetail {
   number: PhoneNumber;
   translated: PhoneNumber;
   /**
-   * Global route type: 1 USER, 2 T30, 3 VOICE_BRIDGE, 4 DID (default),
-   * 5 T38, 6 VOICEML, 8 SDN, 9 MOBILE. Per-number route in the list.
+   * Gateway id on this account (see `GET /v2.2/gateways`) or global route:
+   * 1 USER, 2 T30, 3 VOICE_BRIDGE, 4 DID (default), 5 T38, 6 VOICEML,
+   * 8 SDN, 9 MOBILE. Per-number route in the list.
    */
   route: number;
   /** Gateway address (IP[:port]) or system route name. */
@@ -165,14 +209,86 @@ export interface NumberMessagingState {
   campaign: CampaignBinding | null;
 }
 
+/** Listing state of a number, as reported by the directory-listing operations. */
+export type DirectoryListingStatus =
+  | "listed"
+  | "not_listed"
+  | "pending"
+  | "removing"
+  | "unavailable";
+
+/**
+ * A 411 directory listing as published (or, on PUT, as submitted).
+ *
+ * `type` `B` carries the business name in `name`; `R` carries `firstName` /
+ * `lastName`. Address fields may be empty strings. `complex` marks a
+ * multi-line listing, which is read-only through the API.
+ */
+export interface DirectoryListing {
+  /** `B` (business) or `R` (residence). */
+  type: "B" | "R";
+  /** Business name (type B). */
+  name?: string | null;
+  /** Resident's first name (type R). */
+  firstName?: string | null;
+  /** Resident's last name (type R). */
+  lastName?: string | null;
+  /** Street number. */
+  streetNumber?: string | null;
+  /** Street name, as published. */
+  streetName?: string | null;
+  /** Street type, e.g. St, Ave. */
+  streetType?: string | null;
+  /** Street direction: N, S, E, W, NE, NW, SE or SW. */
+  streetSuffix?: string | null;
+  /** Suite or unit. */
+  location?: string | null;
+  /** City. */
+  city?: string | null;
+  /** Two-letter US state or territory code, as published. */
+  state?: string | null;
+  /** 5-digit ZIP. */
+  zip?: string | null;
+  /** `true` for a multi-line listing; read-only through the API. */
+  complex?: boolean;
+}
+
 // -------------------------------------------------- per-operation responses ---
+
+/**
+ * Response data for `GET`/`PUT`/`DELETE /v2.2/numbers/{number}/directory-listing`.
+ *
+ * PUT and DELETE are accepted at once (HTTP 202) and applied in the
+ * background: `status` is `pending` / `removing` (or `not_listed` when a
+ * pending add was cancelled) and `orderId` carries the carrier order
+ * reference. GET reports the state as published, with `eligible` telling
+ * whether a listing can be added.
+ */
+export interface DirectoryListingData {
+  number: PhoneNumber;
+  /**
+   * `listed`: published. `not_listed`: none. `pending`: an add or change is
+   * being applied. `removing`: a removal is being applied. `unavailable`:
+   * the number cannot be listed.
+   */
+  status: DirectoryListingStatus;
+  /** Whether a listing can be added to this number (GET). */
+  eligible?: boolean;
+  /** The published listing, or `null` when none. */
+  listing?: DirectoryListing | null;
+  /** A submitted listing not yet published, or `null` when none. */
+  pending?: DirectoryListing | null;
+  /** Reference of the submitted change (PUT/DELETE), or `null`. */
+  orderId?: string | null;
+}
 
 /** Response data for `POST /v2.2/numbers`. */
 export interface NumberAddData {
   number: PhoneNumber;
   /**
-   * Global route type: 1 USER, 2 T30, 3 VOICE_BRIDGE, 4 DID (default),
-   * 5 T38, 6 VOICEML, 8 SDN, 9 MOBILE. Returned after adding a number.
+   * Gateway id on this account (see `GET /v2.2/gateways`) or global route:
+   * 1 USER, 2 T30, 3 VOICE_BRIDGE, 4 DID (default), 5 T38, 6 VOICEML,
+   * 8 SDN, 9 MOBILE. Returned after adding a number.
    */
   route: number;
 }
@@ -219,8 +335,9 @@ export interface NumberMoveData {
   number: PhoneNumber;
   accountId: number;
   /**
-   * Global route type: 1 USER, 2 T30, 3 VOICE_BRIDGE, 4 DID (default),
-   * 5 T38, 6 VOICEML, 8 SDN, 9 MOBILE. Route on the destination account after the move.
+   * Gateway id on this account (see `GET /v2.2/gateways`) or global route:
+   * 1 USER, 2 T30, 3 VOICE_BRIDGE, 4 DID (default), 5 T38, 6 VOICEML,
+   * 8 SDN, 9 MOBILE. Route on the destination account after the move.
    */
   route: number;
 }
@@ -229,8 +346,9 @@ export interface NumberMoveData {
 export interface NumberRouteData {
   number: PhoneNumber;
   /**
-   * Global route type: 1 USER, 2 T30, 3 VOICE_BRIDGE, 4 DID (default),
-   * 5 T38, 6 VOICEML, 8 SDN, 9 MOBILE. Echo of the applied route.
+   * Gateway id on this account (see `GET /v2.2/gateways`) or global route:
+   * 1 USER, 2 T30, 3 VOICE_BRIDGE, 4 DID (default), 5 T38, 6 VOICEML,
+   * 8 SDN, 9 MOBILE. Echo of the applied route.
    */
   route: number;
 }

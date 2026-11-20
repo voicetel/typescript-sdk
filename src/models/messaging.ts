@@ -1,8 +1,8 @@
 import type { PhoneNumber } from "./common.js";
 
 /**
- * Body for `POST /v2.2/messages`. `mediaUrls` being non-empty switches the
- * message type to MMS and unlocks `subject`.
+ * Body for `POST /v2.2/messages`. A non-empty `mediaUrls` switches the
+ * message type to MMS.
  *
  * Wire field names are `fromNumber` / `toNumber` — `from` / `to` would collide
  * with TypeScript / JavaScript reserved words.
@@ -12,11 +12,23 @@ export interface MessageSendRequest {
   fromNumber: PhoneNumber;
   /** 10-digit destination TN. */
   toNumber: PhoneNumber;
-  /** UTF-8 message body. */
-  text: string;
-  /** MMS subject line (MMS only). */
+  /**
+   * UTF-8 message body. Required for SMS; optional for MMS, where a
+   * media-only message is valid (max 2048 characters when sent as MMS,
+   * 400 otherwise).
+   */
+  text?: string;
+  /**
+   * MMS subject line (MMS only).
+   *
+   * @deprecated Not delivered on most messaging routes; accepted for
+   * compatibility only — do not rely on it.
+   */
   subject?: string;
-  /** Publicly-reachable media URLs; presence makes this an MMS. */
+  /**
+   * Publicly-reachable http(s) media URLs — at least one when present;
+   * presence makes this an MMS.
+   */
   mediaUrls?: string[];
 }
 
@@ -50,16 +62,32 @@ export interface MessagingCampaignCreateRequest {
  *   - `dlr`:         `sourceNumber`, `destinationNumber`
  */
 export interface MessageRecordValue {
-  sourceNumber?: string;
-  destinationNumber?: string;
+  sourceNumber?: string | null;
+  destinationNumber?: string | null;
   /** "in" or "out" (sms/mms only). */
   direction?: "in" | "out";
   /** Billed rate per message — string for precision (sms/mms only). */
-  rate?: string;
+  rate?: string | null;
   /** Far-end number (sms/mms only). */
-  number?: string;
-  /** Message body (sms/mms only). */
-  message?: string;
+  number?: string | null;
+  /** Message body (sms/mms only); may be empty for a media-only MMS. */
+  message?: string | null;
+  /** The delivery receipt as received, including `stat:` and `err:` (dlr only). */
+  messageText?: string | null;
+  /** Id of the message this receipt is for (dlr only). */
+  transactionGUID?: string | null;
+  /** Present on some receipts for multi-part messages (dlr only). */
+  concatenatedMessage?: string | null;
+  /**
+   * Media attachments (mms only). Inbound: one object per media file (with
+   * `contentFile`, `Content-Type`, `fileName`, `extension`). Outbound: the
+   * submitted media URL(s) — a string or an array of strings.
+   */
+  attachments?: Record<string, unknown>[] | string | string[] | null;
+  /** Subject, if one was sent or received (mms only). */
+  subject?: string | null;
+  /** Address the send request came from (outbound sms only). */
+  ip?: string | null;
 }
 
 /** One row in {@link MessageHistoryData.messages}. */

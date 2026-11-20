@@ -32,6 +32,12 @@ export const created = (data: unknown): Reply => ({
   body: JSON.stringify({ status: "success", data }),
 });
 
+/** 202 Accepted — success envelope for background-applied operations. */
+export const accepted = (data: unknown): Reply => ({
+  status: 202,
+  body: JSON.stringify({ status: "success", data }),
+});
+
 export const noContent: Reply = { status: 204 };
 
 /**

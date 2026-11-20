@@ -1,5 +1,7 @@
 import type { Transport } from "../transport.js";
 import type {
+  DirectoryListingData,
+  DirectoryListingRequest,
   NumberAddData,
   NumberAddRequest,
   NumberCampaignAssignRequest,
@@ -285,6 +287,52 @@ export class NumbersService {
       method: "PATCH",
       path: `/v2.2/numbers/${encodeURIComponent(number)}/port-out-pin`,
       body,
+      ...opts,
+    });
+  }
+
+  /** 411 listing state as published. */
+  getDirectoryListing(
+    number: string,
+    opts?: { signal?: AbortSignal },
+  ): Promise<DirectoryListingData> {
+    return this.t.request<DirectoryListingData>({
+      method: "GET",
+      path: `/v2.2/numbers/${encodeURIComponent(number)}/directory-listing`,
+      ...opts,
+    });
+  }
+
+  /**
+   * Add or replace the 411 directory listing. Accepted at once (202) and
+   * applied in the background — poll `getDirectoryListing` until `status`
+   * leaves `"pending"`. Requires a positive account balance.
+   */
+  setDirectoryListing(
+    number: string,
+    body: DirectoryListingRequest,
+    opts?: { signal?: AbortSignal },
+  ): Promise<DirectoryListingData> {
+    return this.t.request<DirectoryListingData>({
+      method: "PUT",
+      path: `/v2.2/numbers/${encodeURIComponent(number)}/directory-listing`,
+      body,
+      ...opts,
+    });
+  }
+
+  /**
+   * Remove the published listing, or cancel a pending add (which returns
+   * `status: "not_listed"` with no `orderId`). Accepted at once (202) and
+   * applied in the background.
+   */
+  removeDirectoryListing(
+    number: string,
+    opts?: { signal?: AbortSignal },
+  ): Promise<DirectoryListingData> {
+    return this.t.request<DirectoryListingData>({
+      method: "DELETE",
+      path: `/v2.2/numbers/${encodeURIComponent(number)}/directory-listing`,
       ...opts,
     });
   }

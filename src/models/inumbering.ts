@@ -20,8 +20,9 @@ export interface OrderCreateRequest {
 export interface OrderNumberSpec {
   number: PhoneNumber;
   /**
-   * Global route type: 1 USER, 2 T30, 3 VOICE_BRIDGE, 4 DID (default),
-   * 5 T38, 6 VOICEML, 8 SDN, 9 MOBILE. Route for numbers in this order.
+   * Gateway id on this account (see `GET /v2.2/gateways`) or global route:
+   * 1 USER, 2 T30, 3 VOICE_BRIDGE, 4 DID (default), 5 T38, 6 VOICEML,
+   * 8 SDN, 9 MOBILE. Route for numbers in this order.
    */
   route?: number;
 }
@@ -166,6 +167,13 @@ export interface OrderFailedEntry {
   reason: string;
 }
 
+/** One row in {@link OrderCreateData.routes}. */
+export interface OrderRoute {
+  number: PhoneNumber;
+  /** Gateway id or global route the ordered number was placed on. */
+  route: number;
+}
+
 /** Response data for `POST /v2.2/orders`. */
 export interface OrderCreateData {
   orderId: string;
@@ -173,6 +181,8 @@ export interface OrderCreateData {
   amountCharged: number;
   /** Numbers inserted into the account on success. */
   numbersOrdered: string[];
+  /** The route each ordered number was placed on. */
+  routes?: OrderRoute[];
   failed?: OrderFailedEntry[];
 }
 
